@@ -1,12 +1,20 @@
 $(document).ready(function () {
 
   var message_input = $('#message-input');
-  var message_area = $('.jumbotron');
+  var jumbotron = $('#message-list-empty');
+  var message_area = $('#message-list');
+  var message_template = $("#template-message").html();
+  message_template = _.template(message_template);
 
   function send_message(msg) {
     console.log(msg);
+
+    var html = message_template({ 'username': 'John Smith', 'text': msg });
+    message_area.prepend(html);
+//    message_area.scrollTop(message_area.prop("scrollHeight"));
+
     message_input.val('');
-    message_area.hide();
+    jumbotron.hide();
   }
 
   // chat screen
@@ -17,4 +25,5 @@ $(document).ready(function () {
       e.preventDefault();
     }
   });
+
 });
