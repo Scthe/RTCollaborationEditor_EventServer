@@ -1,5 +1,16 @@
-extends layout
+doctype html
+html
+  head
+    title= 'chat-test'
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    link(rel='stylesheet', href='//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css')
+  body
+    #main-container
+      .message-area
+        .chat-box
+          input#message-input.form-control(placeholder="Type the message here")
+      .chat-box.well.well-lg
+        .jumbotron
+          h1 Nothing to see here, move along
+          p Please add a new message !
 
-block content
-  h1= title
-  p Welcome to #{title}
