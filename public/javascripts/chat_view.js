@@ -30,12 +30,19 @@ $(document).ready(function () {
     display_message('John Smith', data.text);
   });
 
+  socket.on('user_mgmt', function (data) {
+    console.log(data);
+
+//    var msg = JSON.parse(data).text;
+    display_message('System', data.text);
+  });
+
   function display_message(username, msg) {
     var html = message_template({ 'username': username, 'text': msg });
     message_area.prepend(html);
 //    message_area.scrollTop(message_area.prop("scrollHeight"));
 
-    $('.jumbotron').hide();
+    jumbotron.hide();
   }
 
   // chat screen
