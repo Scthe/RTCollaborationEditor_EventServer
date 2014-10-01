@@ -7,6 +7,7 @@ var bodyParser = require('body-parser');
 
 var routes = require('./routes/index');
 var chat_view = require('./routes/chat_view');
+var socket_handler = require('./server/socket_handler');
 
 var app = express();
 
@@ -24,6 +25,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
 app.use('/chat', chat_view);
+
+socket_handler(app, 8082);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
