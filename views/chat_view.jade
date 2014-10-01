@@ -1,0 +1,27 @@
+doctype html
+html
+  head
+    title= 'chat-test'
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    link(rel='stylesheet', href='//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css')
+  body
+    #main-container
+      .message-area
+        .chat-box
+          input#message-input.form-control.center(placeholder="Type the message here")
+      #message-list.chat-box.well.well-lg
+        #message-list-empty
+          h1 Nothing to see here, move along
+          p Please add a new message !
+
+  script(type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js')
+  script(type='text/javascript' src='//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.7.0/underscore-min.js')
+  script(type='text/javascript' src='javascripts/chat_view.js')
+
+  script(id='template-message' type='text/template')
+    | <div class="panel panel-success">
+    |   <div class="panel-heading">
+    |     <h3 class="panel-title"><%= username %></h3>
+    |   </div>
+    |   <p class="panel-body"><%= text  %></p>
+    | </div>

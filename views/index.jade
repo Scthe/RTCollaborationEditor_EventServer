@@ -1,5 +1,14 @@
-extends layout
-
-block content
-  h1= title
-  p Welcome to #{title}
+doctype html
+html
+  head
+    title= 'chat-room-select'
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    link(rel='stylesheet', href='//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css')
+  body
+    .room-form.center
+      h3.form-signin-heading
+        | Enter the chat room name:
+      input#room-name.form-control( placeholder="...", required autofocus)
+      // TODO go to chat view !
+      button.btn.btn-lg.btn-primary.btn-block.margin-top-small
+        | Enter
