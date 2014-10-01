@@ -7,6 +7,17 @@ a {
   color: #00B7FF;
 }
 
+.center {
+    text-align: center;
+    max-width: 430px;
+    padding: 15px;
+    margin: 0 auto;
+}
+
+.margin-top-small {
+    margin-top: 10px;
+}
+
 #main-container {
     margin: 0 auto;
 }
