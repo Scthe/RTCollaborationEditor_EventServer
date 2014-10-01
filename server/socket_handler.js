@@ -9,27 +9,28 @@ var http = require('http'),
 
 var sockets = [];
 
-function socket_connected(socket) {
+function socket_connected(app, socket) {
   // TODO check if client has r/w rights
   // TODO return client id
-  console.log('socket got connection !');
 
   _.each(sockets, function (s) {
     s.emit('user_mgmt', { text: 'user connected'});
   });
   sockets.push(socket);
 
-  return { id: 12345};
+  var chat_room = { id: 12345};
+  app.emit('new user', chat_room);
+  return chat_room;
 }
 
-function socket_disconnected(chat_room, socket) {
-  console.log("user disconnected");
-
+function socket_disconnected(app, chat_room, socket) {
   sockets.splice(sockets.indexOf(socket), 1);
 
   _.each(sockets, function (s) {
     s.emit('user_mgmt', { text: 'user disconnected'});
   });
+
+  app.emit('remove user', chat_room);
 }
 
 function on_message(socket, chat_room, data) {
@@ -45,9 +46,9 @@ function socketHandler(app, port) {
   var io = socketIO(server);
   io.sockets.on('connection', function (socket) {
 
-    var chat_room = socket_connected(socket);
+    var chat_room = socket_connected(app, socket);
 
-    socket.on('disconnect', _.partial(socket_disconnected, chat_room, socket));
+    socket.on('disconnect', _.partial(socket_disconnected, app, chat_room, socket));
 
     var message_handler = _.partial(on_message, socket, chat_room);
     socket.on('message', message_handler);
