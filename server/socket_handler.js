@@ -1,56 +1,74 @@
 var http = require('http'),
     socketIO = require('socket.io'),
     _ = require('underscore'),
-    util = require('util');
+    RedisAdapter = require('./redis_adapter');
 
-// TODO validate
-// TODO enrich
-// TODO publish
 
-var sockets = [];
-
-function socket_connected(app, socket) {
+//region Socket lifecycle
+function on_socket_connected(app, socket) {
   // TODO check if client has r/w rights
-  // TODO return client id
 
-  _.each(sockets, function (s) {
-    s.emit('user_mgmt', { text: 'user connected'});
-  });
-  sockets.push(socket);
+  var chat_room = {
+    id       : 12345,
+    client_id: socket.id
+  };
+  console.log(">>[client_id]" + chat_room["client_id"]);
 
-  var chat_room = { id: 12345};
+  chat_room["redis_adapter"] = RedisAdapter(chat_room,
+    _.partial(on_message, socket),
+    _.partial(on_user_status, socket));
+
+  // node-level message
   app.emit('new user', chat_room);
+
+  // inform the client about the communication parameters
+  // ( should be read from handshake cookies really)
+  socket.emit("system", {client_id: chat_room["client_id"]});
+
   return chat_room;
 }
 
-function socket_disconnected(app, chat_room, socket) {
-  sockets.splice(sockets.indexOf(socket), 1);
+function on_socket_disconnected(app, chat_room) {
+  chat_room.redis_adapter.unsubscribe();
 
-  _.each(sockets, function (s) {
-    s.emit('user_mgmt', { text: 'user disconnected'});
-  });
-
+  // node-level message
   app.emit('remove user', chat_room);
 }
 
-function on_message(socket, chat_room, data) {
-  console.log(util.format('[%d] got: %j', chat_room.id, data));
+function on_socket_message(chat_room, data) {
+//  console.log(util.format('[%d] got: %j', chat_room.id, data));
 
-  _.each(sockets, function (s) {
-    s.emit('message_return', data);
-  });
+  // TODO validate
+  // TODO enrich
+  // publish
+  chat_room.redis_adapter.publish_message(data);
+
+  // TODO can as well use node event system to propagate the message to db store
 }
+//endregion
+
+//region event callbacks ( called after message propagation)
+function on_message(socket, data) {
+  socket.emit('message_return', data);
+}
+
+function on_user_status(socket, data) {
+  socket.emit('user_mgmt', data);
+}
+//endregion
 
 function socketHandler(app, port) {
   var server = http.createServer(app).listen(port);
   var io = socketIO(server);
   io.sockets.on('connection', function (socket) {
 
-    var chat_room = socket_connected(app, socket);
+    var chat_room = on_socket_connected(app, socket);
 
-    socket.on('disconnect', _.partial(socket_disconnected, app, chat_room, socket));
+    // disconnect callback
+    socket.on('disconnect', _.partial(on_socket_disconnected, app, chat_room));
 
-    var message_handler = _.partial(on_message, socket, chat_room);
+    // message callback
+    var message_handler = _.partial(on_socket_message, chat_room);
     socket.on('message', message_handler);
   });
 }

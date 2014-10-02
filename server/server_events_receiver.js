@@ -4,11 +4,11 @@ var _ = require('underscore'),
 function systemEventsReceiver(app) {
 
   app.on('new user', function (data) {
-    console.log(util.format('[new user] system event: %j', data));
+    console.log(util.format('[new user] system event: %d', data.id));
   });
 
   app.on('remove user', function (data) {
-    console.log(util.format('[remove user] system event: %j', data));
+    console.log(util.format('[remove user] system event: %d', data.id));
   });
 
 }
