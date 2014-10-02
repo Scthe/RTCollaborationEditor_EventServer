@@ -24,6 +24,7 @@ function defaultRedisClient() {
   client.on('ready', function () {
     console.log(util.format('redis client -%s- ready', client_log_name));
   });
+
   // redisClient.on('end', function() { console.log('redis( ' + name + ')-end'); });
   // redisClient.on('drain', function() { console.log('redis( ' + name + ')-drain : redis is bufferring !'); });
   return client;
@@ -34,35 +35,71 @@ function publish_message(msg) {
   redis_publisher.publish(this.redis_path, JSON.stringify(m));
 }
 
-function publish_user_status(msg) {
-  var m = {type: "user_mgmt", payload: msg};
-  redis_publisher.publish(this.redis_path, JSON.stringify(m));
+function unsubscribe() {
+  var that = this;
+  that.client.quit();
+
+  var client_id = that.chat_room.client_id;
+  redis_publisher.srem(that.redis_user_count_path, client_id, function () {
+    __get_user_count(that.redis_user_count_path, function (err, count) {
+      var m = {
+        type   : "user_mgmt",
+        payload: {
+          text      : 'user \'' + client_id + '\' disconnected',
+          user_count: count
+        }
+      };
+      redis_publisher.publish(that.redis_path, JSON.stringify(m));
+    });
+  });
 }
 
-var RedisAdapter = function (chat_room_id, msg_callback, user_status_callback) {
+function __get_user_count(redis_path, callback) {
+  return redis_publisher.scard(redis_path, callback);
+}
+
+var RedisAdapter = function (chat_room, msg_callback, user_status_callback) {
   // TODO can add f.e. add user count operations here
 
+  var chat_room_id = chat_room.id;
+  var client_id = chat_room.client_id;
   var redis_path = 'chat/room/' + chat_room_id;
-  console.log('socket subscription for: ' + redis_path);
+  var redis_user_count_path = 'chat/room/' + chat_room_id + '/user_list';
 
+  // configure redis client
   var client = defaultRedisClient();
-  client.subscribe(redis_path); // switches to subscriber mode !
+  client.subscribe(redis_path, function () {// switches to subscriber mode !
+    client.on('message', function (ch, msg) {
+      var m = JSON.parse(msg);
+      if (m.type === 'msg') {
+        msg_callback(m.payload);
+      } else {
+        user_status_callback(m.payload);
+      }
+    });
 
-  client.on('message', function (ch, msg) {
-    var m = JSON.parse(msg);
-//    console.log(m);
-    if (m.type === 'msg') {
-      msg_callback(m.payload);
-    } else {
-      user_status_callback(m.payload);
-    }
+    redis_publisher.sadd(redis_user_count_path, client_id, function () {
+      __get_user_count(redis_user_count_path, function (err, count) {
+        var m = {
+          type   : "user_mgmt",
+          payload: {
+            text      : 'user \'' + client_id + '\' connected',
+            user_count: count
+          }
+        };
+        redis_publisher.publish(redis_path, JSON.stringify(m));
+      });
+    });
   });
 
+
   return {
-    client             : client,
-    redis_path         : redis_path,
-    publish_message    : publish_message,
-    publish_user_status: publish_user_status
+    chat_room            : chat_room,
+    client               : client,
+    redis_path           : redis_path,
+    redis_user_count_path: redis_user_count_path,
+    unsubscribe          : unsubscribe,
+    publish_message      : publish_message
   };
 };
 
