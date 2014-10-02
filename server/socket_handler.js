@@ -8,40 +8,40 @@ var http = require('http'),
 function on_socket_connected(app, socket) {
   // TODO check if client has r/w rights
 
-  var chat_room = {
+  var client_data = {
     id       : 12345,
     client_id: socket.id
   };
-  console.log(">>[client_id]" + chat_room["client_id"]);
+  console.log(">>[client_id]" + client_data["client_id"]);
 
-  chat_room["redis_adapter"] = RedisAdapter(chat_room,
+  client_data["redis_adapter"] = RedisAdapter(client_data,
     _.partial(on_message, socket),
     _.partial(on_user_status, socket));
 
   // node-level message
-  app.emit('new user', chat_room);
+  app.emit('new user', client_data);
 
   // inform the client about the communication parameters
   // ( should be read from handshake cookies really)
-  socket.emit("system", {client_id: chat_room["client_id"]});
+  socket.emit("system", {client_id: client_data["client_id"]});
 
-  return chat_room;
+  return client_data;
 }
 
-function on_socket_disconnected(app, chat_room) {
-  chat_room.redis_adapter.unsubscribe();
+function on_socket_disconnected(app, client_data) {
+  client_data.redis_adapter.unsubscribe();
 
   // node-level message
-  app.emit('remove user', chat_room);
+  app.emit('remove user', client_data);
 }
 
-function on_socket_message(chat_room, data) {
+function on_socket_message(client_data, data) {
 //  console.log(util.format('[%d] got: %j', chat_room.id, data));
 
   // TODO validate
   // TODO enrich
   // publish
-  chat_room.redis_adapter.publish_message(data);
+  client_data.redis_adapter.publish_message(data);
 
   // TODO can as well use node event system to propagate the message to db store
 }
@@ -62,13 +62,13 @@ function socketHandler(app, port) {
   var io = socketIO(server);
   io.sockets.on('connection', function (socket) {
 
-    var chat_room = on_socket_connected(app, socket);
+    var client_data = on_socket_connected(app, socket);
 
     // disconnect callback
-    socket.on('disconnect', _.partial(on_socket_disconnected, app, chat_room));
+    socket.on('disconnect', _.partial(on_socket_disconnected, app, client_data));
 
     // message callback
-    var message_handler = _.partial(on_socket_message, chat_room);
+    var message_handler = _.partial(on_socket_message, client_data);
     socket.on('message', message_handler);
   });
 }
