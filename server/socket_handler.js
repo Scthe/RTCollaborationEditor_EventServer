@@ -5,12 +5,13 @@ var http = require('http'),
 
 
 //region Socket lifecycle
-function on_socket_connected(app, socket) {
+function on_socket_connected(app, client_id, chat_room, socket) {
   // TODO check if client has r/w rights
+  chat_room = chat_room === 'b' ? 'b' : 'a';
 
   var client_data = {
-    id       : 12345,
-    client_id: socket.id
+    chat_room: chat_room,
+    client_id: client_id
   };
   console.log(">>[client_id]" + client_data["client_id"]);
 
@@ -36,11 +37,10 @@ function on_socket_disconnected(app, client_data) {
 }
 
 function on_socket_message(client_data, data) {
-//  console.log(util.format('[%d] got: %j', chat_room.id, data));
-
   // TODO validate
   // TODO enrich
   // publish
+  data['username'] = client_data.client_id;
   client_data.redis_adapter.publish_message(data);
 
   // TODO can as well use node event system to propagate the message to db store
@@ -61,15 +61,20 @@ function socketHandler(app, port) {
   var server = http.createServer(app).listen(port);
   var io = socketIO(server);
   io.sockets.on('connection', function (socket) {
+    // we have the socket now wait for the message with client data
+    var client_data;
+    socket.on('client_data', function (msg) {
+      if (!client_data && msg.client_id && msg.chat_room) {
+        client_data = on_socket_connected(app, msg.client_id, msg.chat_room, socket);
 
-    var client_data = on_socket_connected(app, socket);
+        // disconnect callback
+        socket.on('disconnect', _.partial(on_socket_disconnected, app, client_data));
 
-    // disconnect callback
-    socket.on('disconnect', _.partial(on_socket_disconnected, app, client_data));
-
-    // message callback
-    var message_handler = _.partial(on_socket_message, client_data);
-    socket.on('message', message_handler);
+        // message callback
+        var message_handler = _.partial(on_socket_message, client_data);
+        socket.on('message', message_handler);
+      }
+    });
   });
 }
 

@@ -67,7 +67,7 @@ function __get_user_count(redis_path, callback) {
 }
 
 var RedisAdapter = function (client_data, msg_callback, user_status_callback) {
-  var chat_room_id = client_data.id;
+  var chat_room_id = client_data.chat_room;
   var client_id = client_data.client_id;
   var redis_path = 'chat/room/' + chat_room_id;
   var redis_user_count_path = 'chat/room/' + chat_room_id + '/user_list';

@@ -7,11 +7,15 @@ html
   body
     #main-container
       p
-        h4 current users:
+        h4 room:
+          span#current_room _
+          |, me:
+          span#current_client_id _
+          |, current users:
           span#user_count 0
       .message-area
         .chat-box
-          input#message-input.form-control.center(placeholder="Type the message here")
+          input#message-input.form-control.center(placeholder="Type the message here and press enter")
       #message-list.chat-box.well.well-lg
         #message-list-empty
           h1 Nothing to see here, move along

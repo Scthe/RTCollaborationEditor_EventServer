@@ -7,8 +7,8 @@ html
   body
     .room-form.center
       h3.form-signin-heading
-        | Enter the chat room name:
-      input#room-name.form-control( placeholder="...", required autofocus)
-      // TODO go to chat view !
-      button.btn.btn-lg.btn-primary.btn-block.margin-top-small
-        | Enter
+        | Select the chat room:
+      button.btn.btn-lg.btn-primary.btn-block.margin-top-small(onClick="parent.location='/chat?room=a'")
+        | Room A
+      button.btn.btn-lg.btn-primary.btn-block.margin-top-small(onClick="parent.location='/chat?room=b'")
+        | Room B
