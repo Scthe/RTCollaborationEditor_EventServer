@@ -30,25 +30,32 @@ function defaultRedisClient() {
 }
 
 function publish_message(msg) {
-  redis_publisher.publish(this.redis_path, JSON.stringify(msg));
-};
+  var m = {type: "msg", payload: msg};
+  redis_publisher.publish(this.redis_path, JSON.stringify(m));
+}
 
 function publish_user_status(msg) {
-  redis_publisher.publish(this.redis_path, JSON.stringify(msg));
-};
+  var m = {type: "user_mgmt", payload: msg};
+  redis_publisher.publish(this.redis_path, JSON.stringify(m));
+}
 
 var RedisAdapter = function (chat_room_id, msg_callback, user_status_callback) {
   // TODO can add f.e. add user count operations here
 
   var redis_path = 'chat/room/' + chat_room_id;
-  // TODO separate redis pub/sub for users ?
   console.log('socket subscription for: ' + redis_path);
 
   var client = defaultRedisClient();
   client.subscribe(redis_path); // switches to subscriber mode !
 
   client.on('message', function (ch, msg) {
-    msg_callback(JSON.parse(msg));
+    var m = JSON.parse(msg);
+//    console.log(m);
+    if (m.type === 'msg') {
+      msg_callback(m.payload);
+    } else {
+      user_status_callback(m.payload);
+    }
   });
 
   return {
