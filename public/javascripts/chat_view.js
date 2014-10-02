@@ -1,5 +1,4 @@
 $(document).ready(function () {
-
   var client_id;
   var SOCKET_PORT = 8082; // TODO move SOCKET_PORT to some config file
   var socket = io.connect('http://localhost:' + SOCKET_PORT);
@@ -11,13 +10,30 @@ $(document).ready(function () {
   var user_count = $("#user_count");
   message_template = _.template(message_template);
 
-  function send_message(msg) {
-//    console.log(msg);
-    socket.emit('message', {
-      username: client_id,
-      text    : msg
-    });
+  var client_id = Date.now() % 1000;
+  $("#current_client_id").text(client_id);
 
+  // get chat room we are in
+  var chat_room = "a";
+  var url_args = window.location.search.substring(1).split("&");
+  var room_arg = _.find(url_args, function (url) {
+    return /^room=[ab]$/.test(url);
+  });
+  if (room_arg) {
+    chat_room = room_arg[5];
+  }
+  $("#current_room").text(chat_room);
+
+  // send client data as quickly as possible
+  socket.on('connect', function () {
+    socket.emit('client_data', {
+      client_id: client_id,
+      chat_room: chat_room
+    });
+  });
+
+  function send_message(msg) {
+    socket.emit('message', {text: msg });
     message_input.val('');
 
     // TODO can show message now, but should check to not display own message twice

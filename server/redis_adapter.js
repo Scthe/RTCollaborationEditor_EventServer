@@ -40,7 +40,7 @@ function unsubscribe() {
   var that = this;
   that.client.quit();
 
-  var client_id = that.chat_room.client_id;
+  var client_id = that.client_data.client_id;
 
   // remove client from list of client for this chat room ( srem := set remove)
   // THEN get client count after changes
@@ -66,9 +66,9 @@ function __get_user_count(redis_path, callback) {
   return redis_publisher.scard(redis_path, callback);
 }
 
-var RedisAdapter = function (chat_room, msg_callback, user_status_callback) {
-  var chat_room_id = chat_room.id;
-  var client_id = chat_room.client_id;
+var RedisAdapter = function (client_data, msg_callback, user_status_callback) {
+  var chat_room_id = client_data.chat_room;
+  var client_id = client_data.client_id;
   var redis_path = 'chat/room/' + chat_room_id;
   var redis_user_count_path = 'chat/room/' + chat_room_id + '/user_list';
 
@@ -105,7 +105,7 @@ var RedisAdapter = function (chat_room, msg_callback, user_status_callback) {
     }).done();
 
   return {
-    chat_room            : chat_room,
+    client_data            : client_data,
     client               : client,
     redis_path           : redis_path,
     redis_user_count_path: redis_user_count_path,
