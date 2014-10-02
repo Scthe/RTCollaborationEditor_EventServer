@@ -27,7 +27,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', routes);
 app.use('/chat', chat_view);
 
-socket_handler(app, 8082);
+socket_handler(app, 8082); // TODO move socket port to config file
 system_events_receiver(app);
 
 // catch 404 and forward to error handler
