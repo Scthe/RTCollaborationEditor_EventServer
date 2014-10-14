@@ -1,14 +1,23 @@
 doctype html
 html
   head
-    title= 'chat-room-select'
+    title= 'sublime-docs'
     link(rel='stylesheet', href='/stylesheets/style.css')
+    link(rel='stylesheet', href='/stylesheets/codemirror.css')
     link(rel='stylesheet', href='//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css')
+    style(type="text/css")
+      .CodeMirror {border-top: 1px solid #eee; border-bottom: 1px solid #eee; line-height: 1.3; height: 500px}
+      .CodeMirror-linenumbers { padding: 0 8px; }
   body
-    .room-form.center
-      h3.form-signin-heading
-        | Select the chat room:
-      button.btn.btn-lg.btn-primary.btn-block.margin-top-small(onClick="parent.location='/chat?room=a'")
-        | Room A
-      button.btn.btn-lg.btn-primary.btn-block.margin-top-small(onClick="parent.location='/chat?room=b'")
-        | Room B
+    // code mirror editor
+    p
+      | The <code>sublime</code> keymap defines many Sublime Text-specific bindings for CodeMirror. See the code below for an overview.
+   #editor
+
+  script(type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js')
+  script(type='text/javascript' src='//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.7.0/underscore-min.js')
+  script(type='text/javascript' src='https://cdn.socket.io/socket.io-1.1.0.js')
+
+  script(type='text/javascript' src='javascripts/codemirror.js')
+  script(type='text/javascript' src='javascripts/codemirror-setup.js')
+  //script(type='text/javascript' src='javascripts/client-socket.js')

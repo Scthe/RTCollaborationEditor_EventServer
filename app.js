@@ -6,7 +6,6 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
 var routes = require('./routes/index');
-var chat_view = require('./routes/chat_view');
 var socket_handler = require('./server/socket_handler');
 var system_events_receiver = require('./server/server_events_receiver');
 
@@ -25,7 +24,6 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
-app.use('/chat', chat_view);
 
 socket_handler(app, 8082); // TODO move socket port to config file
 system_events_receiver(app);
