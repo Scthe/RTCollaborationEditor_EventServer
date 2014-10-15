@@ -1,3 +1,5 @@
+var remoteInterface;
+
 $(document).ready(function () {
   // TODO init config - move to other file
   var client_id = Date.now() % 1000;
@@ -25,7 +27,6 @@ $(document).ready(function () {
       client_id: client_id,
       chat_room: chat_room
     });
-    send_message("send test");
   });
 
   socket.on('system', function (data) {
@@ -35,6 +36,7 @@ $(document).ready(function () {
   // listen on message_return channel
   socket.on('message_return', function (data) {
     console.log(data);
+    remoteInterface.handler(data.data);
   });
 
   socket.on('user_mgmt', function (data) {
@@ -43,8 +45,13 @@ $(document).ready(function () {
   });
 
   function send_message(msg) {
-    socket.emit('message', {text: msg });
+    socket.emit('message', {data: msg });
     // TODO can show message now, but should check to not display own message twice
   }
 
+  remoteInterface = {
+    send_message: send_message,
+    handler     : function () {
+    }
+  }
 });

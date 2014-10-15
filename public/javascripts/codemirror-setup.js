@@ -34,11 +34,9 @@ $(document).ready(function () {
 //  });
   editor.on("beforeChange", function (instance, changeObj) {
 //    console.log("beforeChange");
-    console.log(changeObj);
+//    console.log(changeObj);
     changeObj.cancel();
-    setTimeout(function () {
-      editor.makeRemoteChange(changeObj);
-    }, 2000);
+    remoteInterface.send_message(changeObj);
   });
   editor.on("cursorActivity", function (instance) {
     var selRange = editor.doc.sel.ranges[0];
@@ -53,4 +51,8 @@ $(document).ready(function () {
 
   //endregion
 
+  remoteInterface.handler = function (changeObj) {
+    console.log(changeObj);
+    editor.makeRemoteChange(changeObj);
+  }
 });

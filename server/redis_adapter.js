@@ -64,7 +64,7 @@ RedisAdapter.prototype = {
   },
   _messageHandlerProto: function (msg_callback, user_status_callback, ch, msg) {
     var m = JSON.parse(msg);
-    if (m.type === 'msg') {
+    if (m.type === 'msg') { // TODO remove msg.type if, make it const time
       msg_callback(m.payload);
     } else {
       user_status_callback(m.payload);
