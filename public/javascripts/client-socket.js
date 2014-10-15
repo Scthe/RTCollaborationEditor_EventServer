@@ -25,6 +25,7 @@ $(document).ready(function () {
       client_id: client_id,
       chat_room: chat_room
     });
+    send_message("send test");
   });
 
   socket.on('system', function (data) {
@@ -43,8 +44,7 @@ $(document).ready(function () {
 
   function send_message(msg) {
     socket.emit('message', {text: msg });
-    message_input.val('');
-
     // TODO can show message now, but should check to not display own message twice
   }
+
 });
