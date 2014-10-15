@@ -3477,16 +3477,27 @@
 
   // Apply a change to a document, and add it to the document's
   // history, and propagating it to all linked documents.
-  function makeChange(doc, change, ignoreReadOnly) {
+  function makeChange(doc, change, ignoreReadOnly, ignoreBeforeChangeHandlers) {
+//    console.log("makeChange: "+ignoreBeforeChangeHandlers);
     if (doc.cm) {
-      if (!doc.cm.curOp) return operation(doc.cm, makeChange)(doc, change, ignoreReadOnly);
-      if (doc.cm.state.suppressEdits) return;
+      if (!doc.cm.curOp) {
+//        console.log('recursive');
+        return operation(doc.cm, makeChange)(doc, change, ignoreReadOnly, ignoreBeforeChangeHandlers);
+      }
+      if (doc.cm.state.suppressEdits){
+//        console.log('return null');
+        return;
+      }
     }
 
-    if (hasHandler(doc, "beforeChange") || doc.cm && hasHandler(doc.cm, "beforeChange")) {
+    var _hasHandler = hasHandler(doc, "beforeChange") || (doc.cm && hasHandler(doc.cm, "beforeChange"));
+    if ( _hasHandler && !ignoreBeforeChangeHandlers) {
+//      console.log('invoke before change listeners');
       change = filterChange(doc, change, true);
       if (!change) return;
     }
+//    console.log('execute:');
+//    console.log(change);
 
     // Possibly split or suppress the update based on the presence
     // of read-only spans in its range.
@@ -3497,6 +3508,14 @@
     } else {
       makeChangeInner(doc, change);
     }
+  }
+
+  function makeRemoteChange( change){
+//      console.log("REMOTE");
+    var withOp = !this.curOp;
+    if (withOp) startOperation(this);
+    makeChange(this.doc, change, false, true );
+    if (withOp) endOperation(this);
   }
 
   function makeChangeInner(doc, change) {
@@ -4451,7 +4470,9 @@
     getInputField: function(){return this.display.input;},
     getWrapperElement: function(){return this.display.wrapper;},
     getScrollerElement: function(){return this.display.scroller;},
-    getGutterElement: function(){return this.display.gutters;}
+    getGutterElement: function(){return this.display.gutters;},
+
+    makeRemoteChange: makeRemoteChange
   };
   eventMixin(CodeMirror);
 

@@ -36,6 +36,9 @@ $(document).ready(function () {
 //    console.log("beforeChange");
     console.log(changeObj);
     changeObj.cancel();
+    setTimeout(function () {
+      editor.makeRemoteChange(changeObj);
+    }, 2000);
   });
   editor.on("cursorActivity", function (instance) {
     var selRange = editor.doc.sel.ranges[0];
