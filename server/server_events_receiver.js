@@ -1,16 +1,15 @@
 var _ = require('underscore'),
     util = require('util');
 
-function systemEventsReceiver(app) {
+module.exports = function (app) {
+  app.on('new user', onNewUser);
+  app.on('remove user', onRemoveUser);
+};
 
-  app.on('new user', function (data) {
-    console.log(util.format('[new user] system event: %d', data.id));
-  });
-
-  app.on('remove user', function (data) {
-    console.log(util.format('[remove user] system event: %d', data.id));
-  });
-
+function onNewUser(data) {
+  console.info(util.format('[system event] new user: %d', data.client_id));
 }
 
-module.exports = systemEventsReceiver;
+function onRemoveUser(data) {
+  console.info(util.format('[system event] remove user: %d', data.client_id));
+}
