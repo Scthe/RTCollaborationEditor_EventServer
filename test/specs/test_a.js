@@ -1,31 +1,50 @@
 /*jslint indent: 2 */
 /*jshint expr: true*/
-/* global describe, it, beforeEach, expect, _ */
+/* global describe, it, beforeEach, expect, _, require, sinon */
 
 (function () {
   'use strict';
 
   var proxyquire = require('proxyquire').noCallThru();
 
+  function voidFunction() {
+  }
+
   describe('RedisAdapter', function () {
 
-    it('creates default publisher & monitor', function () {
-      // TODO use withArgs to differentate monitor/publisher cases
-      var redisClientMock = sinon.spy();
+    var redisVoidProxy = {
+      on     : voidFunction,
+      monitor: voidFunction
+    };
 
-      var redisStub = {
-        createClient: function (port, host) {
-          return {
-            on     : redisClientMock,
-            monitor: redisClientMock
-          };
-        }
-      }
+    it('creates default publisher', function () {
+      var publisherSpy = {
+        on: sinon.spy()
+      };
+      var redisLibraryCreateClient = sinon.stub();
+      redisLibraryCreateClient.onFirstCall().returns(publisherSpy);
+      redisLibraryCreateClient.onSecondCall().returns(redisVoidProxy);
+      var redisLibraryStub = {createClient: redisLibraryCreateClient};
 
-      expect(redisClientMock).to.not.have.been.called;
-      proxyquire('../../server/redis_adapter', { 'redis': redisStub });
-      expect(redisClientMock).to.have.been.called;
-      expect(redisClientMock).to.have.callCount(4);
+      proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
+
+      expect(publisherSpy.on).to.have.callCount(1);
+    });
+
+    it('creates default monitor', function () {
+      var monitorSpy = {
+        on     : sinon.spy(),
+        monitor: sinon.spy()
+      };
+      var redisLibraryCreateClient = sinon.stub();
+      redisLibraryCreateClient.onFirstCall().returns(redisVoidProxy);
+      redisLibraryCreateClient.onSecondCall().returns(monitorSpy);
+      var redisLibraryStub = {createClient: redisLibraryCreateClient};
+
+      proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
+
+      expect(monitorSpy.on).to.have.callCount(2);
+      expect(monitorSpy.monitor).to.have.callCount(1);
     });
 
     describe('#create', function () {
