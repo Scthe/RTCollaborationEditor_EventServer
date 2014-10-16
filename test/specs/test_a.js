@@ -13,8 +13,14 @@
   describe('RedisAdapter', function () {
 
     var redisVoidProxy = {
-      on     : voidFunction,
-      monitor: voidFunction
+      on       : voidFunction,
+      monitor  : voidFunction,
+      subscribe: voidFunction,
+      publish  : voidFunction,
+      srem     : voidFunction,
+      sadd     : voidFunction,
+      scard    : voidFunction,
+      quit     : voidFunction
     };
 
     it('creates default publisher', function () {
@@ -48,6 +54,26 @@
     });
 
     describe('#create', function () {
+
+      it('returns valid object', function () {
+        var redisLibraryCreateClient = sinon.stub();
+        redisLibraryCreateClient.onFirstCall().returns(redisVoidProxy);
+        redisLibraryCreateClient.onSecondCall().returns(redisVoidProxy);
+        redisLibraryCreateClient.onThirdCall().returns(redisVoidProxy);
+        var redisLibraryStub = {createClient: redisLibraryCreateClient};
+
+        var RedisAdapter = proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
+
+        var msgCallback = voidFunction,
+            userStatusCallback = voidFunction,
+            clientData = {
+              chat_room: 'a',
+              client_id: 5
+            };
+
+        var obj = new RedisAdapter(clientData, msgCallback, userStatusCallback);
+        expect(obj).to.exist;
+      });
     });
 
   });
