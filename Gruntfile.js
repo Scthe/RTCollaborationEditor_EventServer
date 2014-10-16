@@ -9,8 +9,8 @@ module.exports = function (grunt) {
       specs: {
         options: {
           ui: 'bdd',
-          reporter: 'dot',
-          require: './test/helpers/chai',
+          reporter: 'list',
+          require: './test/helpers',
           clearRequireCache: true
         },
         src: ['test/specs/**/*.js']
@@ -30,12 +30,12 @@ module.exports = function (grunt) {
           'test/specs/**/*.js',
           'server/**/*.js'
         ],
-        tasks: ['mocha']
+        tasks: ['mochaTest']
       }
     }
   });
 
-  grunt.registerTask('default', ['mochaTest', 'watch']);
+  grunt.registerTask('default', 'watch');
   grunt.registerTask('test', ['mochaTest', 'karma']);
   grunt.registerTask('mocha', ['mochaTest']);
 
