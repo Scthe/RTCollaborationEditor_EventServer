@@ -5,23 +5,25 @@
 (function () {
   'use strict';
 
-  var proxyquire = require('proxyquire').noCallThru();
-
-  function voidFunction() {
-  }
+  var proxyquire = require('proxyquire').noCallThru(),
+      _ = require('underscore');
 
   describe('RedisAdapter', function () {
 
-    var redisVoidProxy = {
-      on       : voidFunction,
-      monitor  : voidFunction,
-      subscribe: voidFunction,
-      publish  : voidFunction,
-      srem     : voidFunction,
-      sadd     : voidFunction,
-      scard    : voidFunction,
-      quit     : voidFunction
-    };
+    var redisVoidProxy;
+
+    beforeEach(function () {
+      redisVoidProxy = {
+        on       : voidFunction,
+        monitor  : voidFunction,
+        subscribe: voidFunction,
+        publish  : voidFunction,
+        srem     : voidFunction,
+        sadd     : voidFunction,
+        scard    : voidFunction,
+        quit     : voidFunction
+      };
+    });
 
     it('creates default publisher', function () {
       var publisherSpy = {
@@ -34,7 +36,7 @@
 
       proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
 
-      expect(publisherSpy.on).to.have.callCount(1);
+      expect(publisherSpy.on).to.be.calledOnce;
     });
 
     it('creates default monitor', function () {
@@ -49,35 +51,88 @@
 
       proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
 
-      expect(monitorSpy.on).to.have.callCount(2);
-      expect(monitorSpy.monitor).to.have.callCount(1);
+      expect(monitorSpy.on).to.be.calledTwice;
+      expect(monitorSpy.monitor).to.be.calledOnce;
     });
 
     describe('#create', function () {
 
-      it('returns valid object', function () {
-        var redisLibraryCreateClient = sinon.stub();
+      var redisLibraryCreateClient,
+          redisLibraryStub,
+          clientData;
+
+      beforeEach(function () {
+        redisLibraryCreateClient = sinon.stub();
         redisLibraryCreateClient.onFirstCall().returns(redisVoidProxy);
         redisLibraryCreateClient.onSecondCall().returns(redisVoidProxy);
         redisLibraryCreateClient.onThirdCall().returns(redisVoidProxy);
-        var redisLibraryStub = {createClient: redisLibraryCreateClient};
+        redisLibraryStub = {createClient: redisLibraryCreateClient};
 
+        clientData = {
+          chat_room: 'a',
+          client_id: 5
+        };
+
+      });
+
+      it('returns valid object', function () {
         var RedisAdapter = proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
 
-        var msgCallback = voidFunction,
-            userStatusCallback = voidFunction,
-            clientData = {
-              chat_room: 'a',
-              client_id: 5
-            };
-
-        var obj = new RedisAdapter(clientData, msgCallback, userStatusCallback);
+        var obj = new RedisAdapter(clientData, voidFunction, voidFunction);
         expect(obj).to.exist;
       });
+
+      it('subscribes client to redis queue', function (done) {
+        var adapter;
+
+        var client = _.clone(redisVoidProxy);
+        client.subscribe = function () {
+          expect(arguments[0]).to.eq(adapter.redis_path);
+          done();
+        };
+        redisLibraryCreateClient.onThirdCall().returns(client);
+
+        var RedisAdapter = proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+      });
+
+      it('adds client to document active users list', function (done) {
+        var publisher = _.clone(redisVoidProxy);
+        publisher.sadd = sinon.spy();
+        redisLibraryCreateClient.onFirstCall().returns(publisher);
+
+        var reqOverrides = {
+          'redis': redisLibraryStub,
+          'Q'    : PromiseSync
+        };
+        PromiseSync.doneCallback = function () {
+          // TODO check publisher.sadd args
+          expect(publisher.sadd).called;
+          done();
+        };
+        var RedisAdapter = proxyquire('../../server/redis_adapter', reqOverrides);
+        new RedisAdapter(clientData, voidFunction, voidFunction);
+      });
+
+      /*
+       it('broadcasts event \'new user\'', function () {
+       var publisher = _.extend({}, redisVoidProxy);
+       publisher.publish = sinon.spy();
+       redisLibraryCreateClient.onFirstCall().returns(publisher);
+
+       var RedisAdapter = proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
+
+
+       //        expect(publisher.publish).to.be.calledOnce();
+       // TODO check publisher.publish args
+       });
+       */
+
     });
 
   });
 
-
+  function voidFunction() {
+  }
 })();
 

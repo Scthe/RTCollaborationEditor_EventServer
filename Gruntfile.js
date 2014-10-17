@@ -10,7 +10,7 @@ module.exports = function (grunt) {
         options: {
           ui: 'bdd',
           reporter: 'list',
-          require: './test/helpers',
+          require: ['./test/helpers', './test/promise-sync'],
           clearRequireCache: true
         },
         src: ['test/specs/**/*.js']
