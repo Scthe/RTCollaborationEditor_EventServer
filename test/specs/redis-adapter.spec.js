@@ -105,13 +105,14 @@
           'redis': redisLibraryStub,
           'Q'    : PromiseSync
         };
+        var adapter;
         PromiseSync.doneCallback = function () {
-          // TODO check publisher.sadd args
           expect(publisher.sadd).called;
+          expect(publisher.sadd).calledWith(adapter.redis_user_count_path, adapter.client_data.client_id);
           done();
         };
         var RedisAdapter = proxyquire('../../server/redis_adapter', reqOverrides);
-        new RedisAdapter(clientData, voidFunction, voidFunction);
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
       /*
