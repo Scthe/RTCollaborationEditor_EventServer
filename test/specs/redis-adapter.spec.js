@@ -194,10 +194,21 @@
 
     describe('#unsubscribe', function () {
 
-      it('removes client from ducument\'s active users list', function () {
-        expect(true).to.be.false;
+      it('removes client from document\'s active users list', function () {
+        var publisher = _.clone(redisVoidProxy);
+        publisher.srem = sinon.spy();
+        redisLibraryCreateClient.onFirstCall().returns(publisher);
+
+        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
+        adapter.unsubscribe();
+
+        expect(publisher.srem).called;
+        expect(publisher.srem).calledWith(adapter.redis_user_count_path, adapter.client_data.client_id);
       });
 
+      /*
       it('publishes correct user count', function () {
         expect(true).to.be.false;
       });
@@ -205,6 +216,7 @@
       it('broadcasts event \'user #{client_id} disconnected\'', function () {
         expect(true).to.be.false;
       });
+      */
 
       // TODO broadcasts id of disconnected client
     });
