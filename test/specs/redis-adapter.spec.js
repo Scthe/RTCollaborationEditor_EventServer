@@ -109,41 +109,59 @@
           expect(publisher.sadd).calledWithExactly(adapter.redis_user_count_path, adapter.client_data.client_id);
           done();
         };
+
         var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
       it('broadcasts event \'new user\'', function (done) {
         var publisher = _.clone(redisVoidProxy);
+        publisher.scard = sinon.stub().returns(4);
         publisher.publish = sinon.spy();
         redisLibraryCreateClient.onFirstCall().returns(publisher);
 
         PromiseSync.doneCallback = function () {
           expect(publisher.publish).called;
+          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
+          // second arg should be stringified JSON
+          publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
           var msgTemplate = {
-            type   : sinon.match.any,
-            payload: sinon.match.any
+            type   : "user_mgmt",
+            payload: {
+              text      : sinon.match.string,
+              user_count: publisher.scard()
+            }
           };
           expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
           done();
         };
+
         var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
-      it('checks how many users there are ( to return this value to clients)', function (done) {
-        // TODO we cannot test this function 100%
-        // ( which would mean we would check if the user value is actually in the message)
-
+      it('publishes correct user count', function (done) {
         var publisher = _.clone(redisVoidProxy);
-        publisher.scard = sinon.spy();
+        publisher.scard = sinon.stub().returns(4);
+        publisher.publish = sinon.spy();
         redisLibraryCreateClient.onFirstCall().returns(publisher);
 
         PromiseSync.doneCallback = function () {
           expect(publisher.scard).called;
           expect(publisher.scard).calledWith(adapter.redis_user_count_path, sinon.match.func);
+          expect(publisher.publish).called;
+          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
+          // second arg should be stringified JSON
+          publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
+          var msgTemplate = {
+            payload: {
+              user_count: publisher.scard()
+            }
+          };
+          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
           done();
         };
+
         var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });

@@ -34,8 +34,11 @@ PromiseSync.prototype.then = function (f) {
     var r = f(this.val);
 
     // execute as long as returned value is a promise
-    while (r instanceof PromiseSync && r.val) {
-      r = r.val();
+    while (r instanceof PromiseSync) {
+      while (r instanceof PromiseSync && _.isFunction(r.val)) {
+        r = r.val();
+      }
+      r = r.val;
     }
   } catch (e) {
     debug('[CATCH]' + this.e);
