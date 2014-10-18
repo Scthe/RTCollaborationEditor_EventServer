@@ -108,3 +108,8 @@ PromiseSync.denodeify = function (f) {
 
 PromiseSync.doneCallback = function () {
 };
+
+PromiseSync.reset = function () {
+  PromiseSync.doneCallback = function () {
+  };
+};

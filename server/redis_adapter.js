@@ -54,6 +54,7 @@ function RedisAdapter(client_data, msg_callback, user_status_callback) {
     .catch(console.printStackTrace)
     .done();
 }
+
 RedisAdapter.prototype = {
   unsubscribe         : unsubscribe,
   publish_message     : publish_message,

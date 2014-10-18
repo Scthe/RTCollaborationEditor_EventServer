@@ -11,6 +11,10 @@
   describe('RedisAdapter', function () {
 
     var redisVoidProxy;
+    var redisLibraryCreateClient,
+        clientData,
+        redisAdapterModuleOverrides,
+        adapter;
 
     beforeEach(function () {
       redisVoidProxy = {
@@ -23,6 +27,26 @@
         scard    : voidFunction,
         quit     : voidFunction
       };
+
+      redisLibraryCreateClient = sinon.stub();
+      redisLibraryCreateClient.onFirstCall().returns(redisVoidProxy);
+      redisLibraryCreateClient.onSecondCall().returns(redisVoidProxy);
+      redisLibraryCreateClient.onThirdCall().returns(redisVoidProxy);
+      var redisLibraryStub = {createClient: redisLibraryCreateClient};
+
+      clientData = {
+        chat_room: faker.internet.password(),
+        client_id: faker.random.number()
+      };
+
+      redisAdapterModuleOverrides = {
+        'redis': redisLibraryStub,
+        'Q'    : PromiseSync
+      };
+    });
+
+    beforeEach(function () {
+      PromiseSync.reset();
     });
 
     it('creates default publisher', function () {
@@ -56,29 +80,6 @@
     });
 
     describe('#create', function () {
-
-      var redisLibraryCreateClient,
-          clientData,
-          redisAdapterModuleOverrides,
-          adapter;
-
-      beforeEach(function () {
-        redisLibraryCreateClient = sinon.stub();
-        redisLibraryCreateClient.onFirstCall().returns(redisVoidProxy);
-        redisLibraryCreateClient.onSecondCall().returns(redisVoidProxy);
-        redisLibraryCreateClient.onThirdCall().returns(redisVoidProxy);
-        var redisLibraryStub = {createClient: redisLibraryCreateClient};
-
-        clientData = {
-          chat_room: faker.internet.password,
-          client_id: faker.random.number()
-        };
-
-        redisAdapterModuleOverrides = {
-          'redis': redisLibraryStub,
-          'Q'    : PromiseSync
-        };
-      });
 
       it('returns valid object', function () {
         var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
@@ -162,6 +163,31 @@
 
         var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+      });
+
+    });
+
+    describe('#publish_message', function () {
+
+      it('works', function () {
+        var publisher = _.clone(redisVoidProxy);
+        publisher.publish = sinon.spy();
+        redisLibraryCreateClient.onFirstCall().returns(publisher);
+
+        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+        var adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
+        var msg = faker.lorem.sentence();
+        adapter.publish_message(msg);
+
+        expect(publisher.publish).called;
+        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
+        // second arg should be stringified JSON
+        for (var i = 0; i < publisher.publish.args.length; i++) {
+          publisher.publish.args[i][1] = JSON.parse(publisher.publish.args[i][1]);
+        }
+
+        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match({ type: "msg", payload: msg }));
       });
 
     });
