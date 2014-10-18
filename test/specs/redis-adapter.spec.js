@@ -208,17 +208,59 @@
         expect(publisher.srem).calledWith(adapter.redis_user_count_path, adapter.client_data.client_id);
       });
 
-      /*
-      it('publishes correct user count', function () {
-        expect(true).to.be.false;
+      it('publishes correct user count', function (done) { // TODO same as #create.publishes-correct-user-count
+        var publisher = _.clone(redisVoidProxy);
+        publisher.scard = sinon.stub().returns(faker.random.number());
+        publisher.publish = sinon.spy();
+        redisLibraryCreateClient.onFirstCall().returns(publisher);
+
+        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
+        PromiseSync.doneCallback = function () {
+          expect(publisher.scard).called;
+          expect(publisher.scard).calledWith(adapter.redis_user_count_path, sinon.match.func);
+          expect(publisher.publish).called;
+          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
+          // second arg should be stringified JSON
+          publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
+          var msgTemplate = {
+            payload: {
+              user_count: publisher.scard()
+            }
+          };
+          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
+          done();
+        };
+        adapter.unsubscribe();
       });
 
-      it('broadcasts event \'user #{client_id} disconnected\'', function () {
-        expect(true).to.be.false;
-      });
-      */
+      it('broadcasts event \'user #{client_id} disconnected\'', function (done) {
+        var publisher = _.clone(redisVoidProxy);
+        publisher.publish = sinon.spy();
+        redisLibraryCreateClient.onFirstCall().returns(publisher);
 
-      // TODO broadcasts id of disconnected client
+        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
+        PromiseSync.doneCallback = function () {
+          expect(publisher.publish).called;
+          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
+          // second arg should be stringified JSON
+          publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
+          var msgTemplate = {
+            type   : "user_mgmt",
+            payload: {
+              text: sinon.match.string
+            }
+          };
+          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
+          done();
+        };
+        adapter.unsubscribe();
+      });
+
+      // TODO broadcasts id of disconnected client, so that client can create msg on it's own
     });
 
   });
