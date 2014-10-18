@@ -11,3 +11,5 @@ global.assertTrue = sinon.assertTrue;
 
 var sinonChai = require("sinon-chai");
 chai.use(sinonChai);
+
+global.faker =  require("faker");

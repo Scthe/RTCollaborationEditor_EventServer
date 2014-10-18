@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "proxyquire": "^1.0.1",
+    "faker": "^2.0.1",
     "sinon": "^1.10.3",
     "sinon-chai": "^2.6.0",
     "chai": "^1.9.2",

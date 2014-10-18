@@ -70,8 +70,8 @@
         var redisLibraryStub = {createClient: redisLibraryCreateClient};
 
         clientData = {
-          chat_room: 'a',
-          client_id: 5
+          chat_room: faker.internet.password,
+          client_id: faker.random.number()
         };
 
         redisAdapterModuleOverrides = {
@@ -116,7 +116,6 @@
 
       it('broadcasts event \'new user\'', function (done) {
         var publisher = _.clone(redisVoidProxy);
-        publisher.scard = sinon.stub().returns(4);
         publisher.publish = sinon.spy();
         redisLibraryCreateClient.onFirstCall().returns(publisher);
 
@@ -128,8 +127,7 @@
           var msgTemplate = {
             type   : "user_mgmt",
             payload: {
-              text      : sinon.match.string,
-              user_count: publisher.scard()
+              text: sinon.match.string
             }
           };
           expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
@@ -142,7 +140,7 @@
 
       it('publishes correct user count', function (done) {
         var publisher = _.clone(redisVoidProxy);
-        publisher.scard = sinon.stub().returns(4);
+        publisher.scard = sinon.stub().returns(faker.random.number());
         publisher.publish = sinon.spy();
         redisLibraryCreateClient.onFirstCall().returns(publisher);
 
