@@ -44,7 +44,7 @@ PromiseSync.prototype.then = function (f) {
     }
   } catch (e) {
     debug('[CATCH]' + this.e);
-    return new PromiseSync({}, e);
+    return new PromiseSync(undefined, e);
   }
   return new PromiseSync(r);
 };
@@ -52,7 +52,7 @@ PromiseSync.prototype.then = function (f) {
 PromiseSync.prototype.catch = function (f) {
   debug('promise#catch');
   if (this.err) {
-    debug(this.err);
+    debug(this.err.stack);
     if (f) {
       f(this.err);
     }
@@ -73,7 +73,7 @@ PromiseSync.prototype.done = function () {
 // knowing that the promises will start being executed
 // AFTER the function describing the test have finished)
 PromiseSync.nbind = function (f, f_this) {
-  debug('Promise.nbind');
+  debug('PromiseSync.nbind');
   return function () {
     // problem we are trying to solve here is to call provided function
     // with the same arguments as were originally provided
@@ -84,6 +84,26 @@ PromiseSync.nbind = function (f, f_this) {
     promise.preExecute = true;
     return promise;
   };
+};
+
+PromiseSync.denodeify = function (f) {
+  debug('PromiseSync.denodeify');
+  if (!f) {
+    throw new Error("Called PromiseSync.denodeify with undefined function as argument");
+  }
+  return function () {
+    var args = _.values(arguments);
+    args.push(callback);
+    try {
+      var r = f.apply(undefined, args); // TODO binds 'this' as undefined !
+      return new PromiseSync(r);
+    } catch (e) {
+      return new PromiseSync(undefined, e);
+    }
+  };
+  function callback(err, data) {
+    return err ? new PromiseSync(undefined, e) : new PromiseSync(data);
+  }
 };
 
 PromiseSync.doneCallback = function () {

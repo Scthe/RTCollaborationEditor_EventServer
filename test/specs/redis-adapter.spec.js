@@ -107,27 +107,58 @@
         };
         var adapter;
         PromiseSync.doneCallback = function () {
-          expect(publisher.sadd).called;
-          expect(publisher.sadd).calledWith(adapter.redis_user_count_path, adapter.client_data.client_id);
+          expect(publisher.sadd).calledOnce;
+          expect(publisher.sadd).calledWithExactly(adapter.redis_user_count_path, adapter.client_data.client_id);
           done();
         };
         var RedisAdapter = proxyquire('../../server/redis_adapter', reqOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
-      /*
-       it('broadcasts event \'new user\'', function () {
-       var publisher = _.extend({}, redisVoidProxy);
-       publisher.publish = sinon.spy();
-       redisLibraryCreateClient.onFirstCall().returns(publisher);
+      it('broadcasts event \'new user\'', function (done) {
+        var publisher = _.clone(redisVoidProxy);
+        publisher.publish = sinon.spy();
+        redisLibraryCreateClient.onFirstCall().returns(publisher);
 
-       var RedisAdapter = proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
+        var reqOverrides = {
+          'redis': redisLibraryStub,
+          'Q'    : PromiseSync
+        };
+        var adapter;
+        PromiseSync.doneCallback = function () {
+          expect(publisher.publish).called;
+          var msgTemplate = {
+            type   : sinon.match.any,
+            payload: sinon.match.any
+          };
+          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
+          done();
+        };
+        var RedisAdapter = proxyquire('../../server/redis_adapter', reqOverrides);
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+      });
 
+      it('checks how many users there are ( to return this value to clients)', function (done) {
+        // TODO we cannot test this function 100%
+        // ( which would mean we would check if the user value is actually in the message)
 
-       //        expect(publisher.publish).to.be.calledOnce();
-       // TODO check publisher.publish args
-       });
-       */
+        var publisher = _.clone(redisVoidProxy);
+        publisher.scard = sinon.spy();
+        redisLibraryCreateClient.onFirstCall().returns(publisher);
+
+        var reqOverrides = {
+          'redis': redisLibraryStub,
+          'Q'    : PromiseSync
+        };
+        var adapter;
+        PromiseSync.doneCallback = function () {
+          expect(publisher.scard).called;
+          expect(publisher.scard).calledWith(adapter.redis_user_count_path, sinon.match.func);
+          done();
+        };
+        var RedisAdapter = proxyquire('../../server/redis_adapter', reqOverrides);
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+      });
 
     });
 
