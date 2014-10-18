@@ -10,15 +10,56 @@
 
   describe('SocketHandler', function () {
 
+    describe('#connected', function () {
 
-    it('test', function () {
-      expect(true).to.be.true;
+      describe('RedisAdapter', function () {
+
+        it('is created', function () {
+        });
+
+        it('has correct message handler', function () {
+        });
+
+        it('has correct user status change handler', function () {
+        });
+
+      });
+
+      it('propagates to node message bus', function () {
+      });
+
     });
 
+    describe('#disconnected', function () {
 
+      it('propagates to redis', function () {
+      });
+
+      it('propagates to node message bus', function () {
+      });
+
+    });
+
+    it('propagates client messages to redis', function () {
+    });
+
+    describe('propagates', function () {
+
+      describe('messages', function () {
+
+        it(' - redis', function () {
+        });
+
+        it(' - node message bus', function () {
+        });
+
+      });
+
+      it('user status changes', function () {
+      });
+
+    });
   });
 
-  function voidFunction() {
-  }
 })();
 
