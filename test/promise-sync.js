@@ -30,11 +30,6 @@ PromiseSync.prototype.then = function (f) {
   }
 
   try {
-    // dirty hack, used f.e. in nbind
-    if (this.preExecute && _.isFunction(this.val)) {
-      this.val = this.val();
-    }
-
     // execute
     var r = f(this.val);
 
@@ -78,11 +73,13 @@ PromiseSync.nbind = function (f, f_this) {
     // problem we are trying to solve here is to call provided function
     // with the same arguments as were originally provided
     var args = _.values(arguments);
-    var promise = new PromiseSync(function () {
-      return f.apply(f_this, args);
-    });
-    promise.preExecute = true;
-    return promise;
+
+    try {
+      var r = f.apply(f_this, args);
+      return new PromiseSync(r);
+    } catch (e) {
+      return new PromiseSync(undefined, e);
+    }
   };
 };
 

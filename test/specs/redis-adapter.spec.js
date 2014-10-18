@@ -58,42 +58,45 @@
     describe('#create', function () {
 
       var redisLibraryCreateClient,
-          redisLibraryStub,
-          clientData;
+          clientData,
+          redisAdapterModuleOverrides,
+          adapter;
 
       beforeEach(function () {
         redisLibraryCreateClient = sinon.stub();
         redisLibraryCreateClient.onFirstCall().returns(redisVoidProxy);
         redisLibraryCreateClient.onSecondCall().returns(redisVoidProxy);
         redisLibraryCreateClient.onThirdCall().returns(redisVoidProxy);
-        redisLibraryStub = {createClient: redisLibraryCreateClient};
+        var redisLibraryStub = {createClient: redisLibraryCreateClient};
 
         clientData = {
           chat_room: 'a',
           client_id: 5
         };
 
+        redisAdapterModuleOverrides = {
+          'redis': redisLibraryStub,
+          'Q'    : PromiseSync
+        };
       });
 
       it('returns valid object', function () {
-        var RedisAdapter = proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
+        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
 
         var obj = new RedisAdapter(clientData, voidFunction, voidFunction);
         expect(obj).to.exist;
       });
 
-      it('subscribes client to redis queue', function (done) {
-        var adapter;
-
+      it('subscribes client to redis queue', function () {
         var client = _.clone(redisVoidProxy);
-        client.subscribe = function () {
-          expect(arguments[0]).to.eq(adapter.redis_path);
-          done();
-        };
+        client.subscribe = sinon.spy();
         redisLibraryCreateClient.onThirdCall().returns(client);
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
+        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
+        expect(client.subscribe).called;
+        expect(client.subscribe).calledWith(adapter.redis_path);
       });
 
       it('adds client to document active users list', function (done) {
@@ -101,17 +104,12 @@
         publisher.sadd = sinon.spy();
         redisLibraryCreateClient.onFirstCall().returns(publisher);
 
-        var reqOverrides = {
-          'redis': redisLibraryStub,
-          'Q'    : PromiseSync
-        };
-        var adapter;
         PromiseSync.doneCallback = function () {
           expect(publisher.sadd).calledOnce;
           expect(publisher.sadd).calledWithExactly(adapter.redis_user_count_path, adapter.client_data.client_id);
           done();
         };
-        var RedisAdapter = proxyquire('../../server/redis_adapter', reqOverrides);
+        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
@@ -120,11 +118,6 @@
         publisher.publish = sinon.spy();
         redisLibraryCreateClient.onFirstCall().returns(publisher);
 
-        var reqOverrides = {
-          'redis': redisLibraryStub,
-          'Q'    : PromiseSync
-        };
-        var adapter;
         PromiseSync.doneCallback = function () {
           expect(publisher.publish).called;
           var msgTemplate = {
@@ -134,7 +127,7 @@
           expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
           done();
         };
-        var RedisAdapter = proxyquire('../../server/redis_adapter', reqOverrides);
+        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
@@ -146,17 +139,12 @@
         publisher.scard = sinon.spy();
         redisLibraryCreateClient.onFirstCall().returns(publisher);
 
-        var reqOverrides = {
-          'redis': redisLibraryStub,
-          'Q'    : PromiseSync
-        };
-        var adapter;
         PromiseSync.doneCallback = function () {
           expect(publisher.scard).called;
           expect(publisher.scard).calledWith(adapter.redis_user_count_path, sinon.match.func);
           done();
         };
-        var RedisAdapter = proxyquire('../../server/redis_adapter', reqOverrides);
+        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 

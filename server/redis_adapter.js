@@ -58,7 +58,7 @@ RedisAdapter.prototype = {
   unsubscribe         : unsubscribe,
   publish_message     : publish_message,
   _getUserCount       : function () {
-    return Q.denodeify(function (redis_path, callback) { // TODO use partial
+    return Q.denodeify(function (redis_path, callback) { // TODO use partial / simplify
       return redis_publisher.scard(redis_path, callback);
     })(this.redis_user_count_path);
   },
