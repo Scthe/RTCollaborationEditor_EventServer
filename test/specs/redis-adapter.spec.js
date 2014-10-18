@@ -192,6 +192,23 @@
 
     });
 
+    describe('#unsubscribe', function () {
+
+      it('removes client from ducument\'s active users list', function () {
+        expect(true).to.be.false;
+      });
+
+      it('publishes correct user count', function () {
+        expect(true).to.be.false;
+      });
+
+      it('broadcasts event \'user #{client_id} disconnected\'', function () {
+        expect(true).to.be.false;
+      });
+
+      // TODO broadcasts id of disconnected client
+    });
+
   });
 
   function voidFunction() {
