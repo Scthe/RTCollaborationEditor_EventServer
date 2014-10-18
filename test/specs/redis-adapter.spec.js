@@ -1,6 +1,6 @@
 /*jslint indent: 2 */
 /*jshint expr: true*/
-/* global describe, it, beforeEach, expect, _, require, sinon */
+/* global describe, it, beforeEach, expect, _, require, sinon, voidFunction */
 
 (function () {
   'use strict';
@@ -265,7 +265,5 @@
 
   });
 
-  function voidFunction() {
-  }
 })();
 
