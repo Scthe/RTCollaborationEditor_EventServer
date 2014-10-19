@@ -1,6 +1,6 @@
 /*jslint indent: 2 */
 /*jshint expr: true*/
-/* global describe, it, beforeEach, expect, _, require, sinon, voidFunction */
+/* global describe, it, beforeEach, expect, require, sinon, afterEach, faker */
 
 (function () {
   'use strict';
@@ -13,29 +13,30 @@
 
   describe('SocketHandler', function () {
 
-    var SocketHandler,  // constructor function
-        server,
+    var server,
         app,            // server state
         socket;
 
     beforeEach(function () {
+      // constructor like function
       var socketHandlerModuleOverrides = {
         './redis_adapter': RedisAdapterProxy
       };
-      SocketHandler = proxyquire('../../server/socket_handler', socketHandlerModuleOverrides);
+      var registerSocketHandler = proxyquire('../../server/socket_handler', socketHandlerModuleOverrides);
 
       // start socket server
       app = function () {
       };
       app.emit = sinon.spy();
-      server = SocketHandler(app, SOCKET_PORT);
+      server = registerSocketHandler(app, SOCKET_PORT);
 
       socket = io.connect('http://' + SOCKET_HOST + ':' + SOCKET_PORT, { forceNew: true });
     });
 
     afterEach(function () {
-      if (server)
+      if (server) {
         server.close();
+      }
       RedisAdapterProxy.prototype.lastInstance = undefined;
     });
 
@@ -76,36 +77,36 @@
     });
 
     /*
-    // TODO check why this test conflicts with the connects test
-    describe('#disconnected', function () {
+     // TODO check why this test conflicts with the connects test
+     describe('#disconnected', function () {
 
-      it('propagates to redis', function (done) {
-        socket.on('connect', function () {
-          RedisAdapterProxy.prototype.lastInstance.unsubscribe = onRedisUnsubscribe;
-          socket.disconnect();
-        });
+     it('propagates to redis', function (done) {
+     socket.on('connect', function () {
+     RedisAdapterProxy.prototype.lastInstance.unsubscribe = onRedisUnsubscribe;
+     socket.disconnect();
+     });
 
-        function onRedisUnsubscribe() {
-          done();
-        }
-      });
+     function onRedisUnsubscribe() {
+     done();
+     }
+     });
 
-      it('propagates to node message bus', function (done) {
-        socket.on('connect', function () {
-          app.emit = function (path, data) {
-            if (path === 'remove user') {
-              expect(data.chat_room).to.be.a('string');
-              expect(data.client_id).to.be.a('number');
-              expect(data.redis_adapter).to.be.eq(RedisAdapterProxy.prototype.lastInstance);
-              done();
-            }
-          };
-          socket.disconnect();
-        });
-      });
+     it('propagates to node message bus', function (done) {
+     socket.on('connect', function () {
+     app.emit = function (path, data) {
+     if (path === 'remove user') {
+     expect(data.chat_room).to.be.a('string');
+     expect(data.client_id).to.be.a('number');
+     expect(data.redis_adapter).to.be.eq(RedisAdapterProxy.prototype.lastInstance);
+     done();
+     }
+     };
+     socket.disconnect();
+     });
+     });
 
-    });
-    */
+     });
+     */
 
     it('#on_socket_message propagates client messages to redis', function (done) {
       socket.on('connect', function () {
@@ -163,6 +164,7 @@
   });
 
   function RedisAdapterProxy(clientData, messageHandler, userStatusChangeHandler) {
+    /* jshint unused:false */ // clientData is not used
     this.constructor = sinon.spy();
     this.constructor.apply(this, arguments);
     RedisAdapterProxy.prototype.lastInstance = this;

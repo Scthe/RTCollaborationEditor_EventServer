@@ -1,3 +1,5 @@
+'use strict';
+
 global.PromiseSync = PromiseSync;
 
 // TODO rename to something cool f.e. APromiseOfSync ? ( like in 'A Dream of Spring' kind of thing)
@@ -7,8 +9,9 @@ var _ = require('underscore');
 var printDebug = false;
 
 function debug(msg) {
-  if (printDebug)
+  if (printDebug) {
     console.log(msg);
+  }
 }
 
 function PromiseSync(val, err) {
@@ -29,6 +32,7 @@ PromiseSync.prototype.then = function (f) {
     return this;
   }
 
+  var promise;
   try {
     // execute
     var r = f(this.val);
@@ -40,11 +44,13 @@ PromiseSync.prototype.then = function (f) {
       }
       r = r.val;
     }
+    promise = new PromiseSync(r);
   } catch (e) {
     debug('[CATCH]' + this.e);
-    return new PromiseSync(undefined, e);
+    promise = new PromiseSync(undefined, e);
   }
-  return new PromiseSync(r);
+
+  return promise;
 };
 
 PromiseSync.prototype.catch = function (f) {
@@ -89,7 +95,7 @@ PromiseSync.nbind = function (f, f_this) {
 PromiseSync.denodeify = function (f) {
   debug('PromiseSync.denodeify');
   if (!f) {
-    throw new Error("Called PromiseSync.denodeify with undefined function as argument");
+    throw new Error('Called PromiseSync.denodeify with undefined function as argument');
   }
   return function () {
     var args = _.values(arguments);
@@ -102,7 +108,7 @@ PromiseSync.denodeify = function (f) {
     }
   };
   function callback(err, data) {
-    return err ? new PromiseSync(undefined, e) : new PromiseSync(data);
+    return err ? new PromiseSync(undefined, err) : new PromiseSync(data);
   }
 };
 

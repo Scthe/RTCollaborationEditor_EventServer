@@ -23,11 +23,11 @@ function onNewConnection(app, socket) {
     client_id: Date.now() % 1000,   // TODO read from socket handshake
     chat_room: 'aaa'                // TODO read from socket handshake
   };
-  client_data["redis_adapter"] = new RedisAdapter(client_data,
+  client_data.redis_adapter = new RedisAdapter(client_data,
     _.partial(on_message, socket),
     _.partial(on_user_status, socket));
 
-  console.log("[client_id]" + client_data["client_id"]);
+  console.log('[client_id]' + client_data.client_id);
 
   // socket callbacks
   socket.on('disconnect', _.partial(on_socket_disconnected, app, client_data));
@@ -49,7 +49,7 @@ function on_socket_message(client_data, data) {
   // TODO validate
   // TODO enrich
   // publish
-  data['username'] = client_data.client_id;
+  data.username = client_data.client_id;
   client_data.redis_adapter.publish_message(data);
 
   // TODO can as well use node event system to propagate the message to db store

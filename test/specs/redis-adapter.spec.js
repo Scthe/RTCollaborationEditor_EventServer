@@ -1,6 +1,6 @@
 /*jslint indent: 2 */
 /*jshint expr: true*/
-/* global describe, it, beforeEach, expect, _, require, sinon, voidFunction */
+/* global describe, it, beforeEach, expect, require, sinon, voidFunction, faker, PromiseSync */
 
 (function () {
   'use strict';
@@ -126,7 +126,7 @@
           // second arg should be stringified JSON
           publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
           var msgTemplate = {
-            type   : "user_mgmt",
+            type   : 'user_mgmt',
             payload: {
               text: sinon.match.string
             }
@@ -187,7 +187,7 @@
           publisher.publish.args[i][1] = JSON.parse(publisher.publish.args[i][1]);
         }
 
-        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match({ type: "msg", payload: msg }));
+        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match({ type: 'msg', payload: msg }));
       });
 
     });
@@ -249,7 +249,7 @@
           // second arg should be stringified JSON
           publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
           var msgTemplate = {
-            type   : "user_mgmt",
+            type   : 'user_mgmt',
             payload: {
               text: sinon.match.string
             }

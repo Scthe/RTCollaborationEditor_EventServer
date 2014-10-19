@@ -21,7 +21,7 @@ var redis_publisher = defaultRedisClient('PUBLISHER');
     var d = new Date(0);
     d.setUTCSeconds(time);
     console.redis(
-      util.format('[REDIS] %d:%d:%d $%s', d.getHours(), d.getMinutes(), d.getSeconds(), args.join(" ")));
+      util.format('[REDIS] %d:%d:%d $%s', d.getHours(), d.getMinutes(), d.getSeconds(), args.join(' ')));
   });
   return monitor;
 })();
@@ -62,6 +62,7 @@ RedisAdapter.prototype = {
     return Q.denodeify(redis_publisher.scard)(this.redis_user_count_path);
   },
   _messageHandlerProto: function (msg_callback, user_status_callback, ch, msg) {
+    /* jshint unused:false */ // ch is not used
     var m = JSON.parse(msg);
     if (m.type === 'msg') { // TODO remove msg.type if, make it const time
       msg_callback(m.payload);
@@ -79,7 +80,7 @@ function defaultRedisClient() {
 
   var client = redis.createClient(REDIS_PORT, REDIS_HOST);
 
-  var client_log_name = arguments.length > 0 ? arguments[0] : "from socket";
+  var client_log_name = arguments.length > 0 ? arguments[0] : 'from socket';
   client.on('ready', function () {
     console.debug(util.format('redis client -%s- ready', client_log_name));
   });
@@ -88,6 +89,7 @@ function defaultRedisClient() {
 }
 
 function unsubscribe() {
+  /* jshint -W040 */ // binded to RedisAdapter prototype object
   var that = this;
   that.client.quit();
 
@@ -107,13 +109,15 @@ function unsubscribe() {
 }
 
 function publish_message(msg) {
-  var m = {type: "msg", payload: msg};
+  /* jshint -W040 */ // binded to RedisAdapter prototype object
+  var m = {type: 'msg', payload: msg};
   redis_publisher.publish(this.redis_path, JSON.stringify(m));
 }
 
 function publishUserMgmtMessage(texxt, count) {
+  /* jshint -W040 */ // binded to RedisAdapter prototype object
   var m = {
-    type   : "user_mgmt",
+    type   : 'user_mgmt',
     payload: { text: texxt, user_count: count }
   };
   var redisPublish = Q.nbind(redis_publisher.publish, redis_publisher);

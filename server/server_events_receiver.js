@@ -1,5 +1,6 @@
-var _ = require('underscore'),
-    util = require('util');
+'use strict';
+
+var util = require('util');
 
 module.exports = function (app) {
   app.on('new user', onNewUser);

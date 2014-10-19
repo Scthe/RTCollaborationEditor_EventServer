@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+
+'use strict';
+/* exported server */
+
 var debug = require('debug')('chat2');
 var app = require('../app');
 
