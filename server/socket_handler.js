@@ -9,49 +9,35 @@ module.exports = function (app, port) {
   var server = http.createServer(app).listen(port);
   var io = socketIO(server);
 
-  io.sockets.on('connection', function (socket) {
-    // we have the socket now wait for the message with client data TODO remove this stupid mechanism
-    var client_data;
-    socket.on('client_data', function (msg) {
-      if (!client_data && msg.client_id && msg.chat_room) {
-        client_data = on_socket_connected(app, msg.client_id, msg.chat_room, socket);
+  // create handler for socket connections
+  io.sockets.on('connection', _.partial(onNewConnection, app));
 
-        // disconnect callback
-        socket.on('disconnect', _.partial(on_socket_disconnected, app, client_data));
-
-        // message callback
-        var message_handler = _.partial(on_socket_message, client_data);
-        socket.on('message', message_handler);
-      }
-    });
-  });
+  // give possibility to gracefully close socket server
+  return server;
 };
 
-//region socket lifecycle
-function on_socket_connected(app, client_id, chat_room, socket) {
+function onNewConnection(app, socket) {
   // TODO check if client has r/w rights
-  chat_room = chat_room === 'b' ? 'b' : 'a';
 
   var client_data = {
-    chat_room: chat_room,
-    client_id: client_id
+    client_id: Date.now() % 1000,   // TODO read from socket handshake
+    chat_room: 'aaa'                // TODO read from socket handshake
   };
-  console.log(">>[client_id]" + client_data["client_id"]);
-
   client_data["redis_adapter"] = new RedisAdapter(client_data,
     _.partial(on_message, socket),
     _.partial(on_user_status, socket));
 
+  console.log("[client_id]" + client_data["client_id"]);
+
+  // socket callbacks
+  socket.on('disconnect', _.partial(on_socket_disconnected, app, client_data));
+  socket.on('message', _.partial(on_socket_message, client_data));
+
   // node-level message
   app.emit('new user', client_data);
-
-  // inform the client about the communication parameters
-  // ( should be read from handshake cookies really)
-  socket.emit("system", {client_id: client_data["client_id"]});
-
-  return client_data;
 }
 
+//region socket lifecycle
 function on_socket_disconnected(app, client_data) {
   client_data.redis_adapter.unsubscribe();
 
