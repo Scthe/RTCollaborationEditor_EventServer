@@ -4,11 +4,6 @@ $(document).ready(function () {
   var SOCKET_PORT = 8082; // TODO move SOCKET_PORT to some config file
   var socket = io.connect('http://localhost:' + SOCKET_PORT);
 
-  socket.on('system', function (data) {
-    // TODO read this from cookie. Or just do not display this
-    $("#current_client_id").text(data.client_id);
-  });
-
   // listen on message_return channel
   socket.on('message_return', function (data) {
     console.log(data);
@@ -30,4 +25,5 @@ $(document).ready(function () {
     handler     : function () {
     }
   }
+
 });

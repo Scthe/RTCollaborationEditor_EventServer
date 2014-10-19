@@ -23,31 +23,21 @@ function onNewConnection(app, socket) {
     client_id: Date.now() % 1000,   // TODO read from socket handshake
     chat_room: 'aaa'                // TODO read from socket handshake
   };
-  console.log("[client_id]" + client_data["client_id"]);
-  on_socket_connected(app, client_data, socket);
-
-  // disconnect callback
-  socket.on('disconnect', _.partial(on_socket_disconnected, app, client_data));
-
-  // message callback
-  var message_handler = _.partial(on_socket_message, client_data);
-  socket.on('message', message_handler);
-}
-
-//region socket lifecycle
-function on_socket_connected(app, client_data, socket) {
   client_data["redis_adapter"] = new RedisAdapter(client_data,
     _.partial(on_message, socket),
     _.partial(on_user_status, socket));
 
+  console.log("[client_id]" + client_data["client_id"]);
+
+  // socket callbacks
+  socket.on('disconnect', _.partial(on_socket_disconnected, app, client_data));
+  socket.on('message', _.partial(on_socket_message, client_data));
+
   // node-level message
   app.emit('new user', client_data);
-
-  // inform the client about the communication parameters
-  // ( should be read from handshake cookies really)
-  socket.emit("system", {client_id: client_data["client_id"]}); // TODO remove this
 }
 
+//region socket lifecycle
 function on_socket_disconnected(app, client_data) {
   client_data.redis_adapter.unsubscribe();
 
