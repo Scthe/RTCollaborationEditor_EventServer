@@ -41,7 +41,7 @@
 
       redisAdapterModuleOverrides = {
         'redis': redisLibraryStub,
-        'Q'    : PromiseSync
+        'q'    : PromiseSync
       };
     });
 

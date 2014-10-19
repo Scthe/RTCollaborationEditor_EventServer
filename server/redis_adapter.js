@@ -3,7 +3,7 @@
 var redis = require('redis'),
     _ = require('underscore'),
     util = require('util'),
-    Q = require('Q');
+    Q = require('q');
 
 var REDIS_PORT = 6379; // TODO move to config file
 var REDIS_HOST = 'localhost';
@@ -13,17 +13,17 @@ var redis_publisher = defaultRedisClient('PUBLISHER');
 
 // create redis monitor to log all operations
 (function () {
-  var a = defaultRedisClient('MONITOR');
-  a.monitor(function () {
+  var monitor = defaultRedisClient('MONITOR');
+  monitor.monitor(function () {
     console.info('Entering monitoring mode.');
   });
-  a.on('monitor', function (time, args) {
+  monitor.on('monitor', function (time, args) {
     var d = new Date(0);
     d.setUTCSeconds(time);
     console.redis(
       util.format('[REDIS] %d:%d:%d $%s', d.getHours(), d.getMinutes(), d.getSeconds(), args.join(" ")));
   });
-  return a;
+  return monitor;
 })();
 
 
@@ -50,7 +50,7 @@ function RedisAdapter(client_data, msg_callback, user_status_callback) {
       return redisAddClient(that.redis_user_count_path, client_data.client_id);
     })
     .then(that._getUserCount.bind(that))
-    .then(_.partial(publishUserMgmtMessage, msgText).bind(that))
+    .then(publishUserMgmtMessage.bind(that, msgText))
     .catch(console.printStackTrace)
     .done();
 }
@@ -59,9 +59,7 @@ RedisAdapter.prototype = {
   unsubscribe         : unsubscribe,
   publish_message     : publish_message,
   _getUserCount       : function () {
-    return Q.denodeify(function (redis_path, callback) { // TODO use partial / simplify
-      return redis_publisher.scard(redis_path, callback);
-    })(this.redis_user_count_path);
+    return Q.denodeify(redis_publisher.scard)(this.redis_user_count_path);
   },
   _messageHandlerProto: function (msg_callback, user_status_callback, ch, msg) {
     var m = JSON.parse(msg);
@@ -103,7 +101,7 @@ function unsubscribe() {
 
   redisRemoveClient(that.redis_user_count_path, client_id)
     .then(that._getUserCount.bind(that))
-    .then(_.partial(publishUserMgmtMessage, msgText).bind(that))
+    .then(publishUserMgmtMessage.bind(that, msgText))
     .catch(console.printStackTrace)
     .done();
 }
