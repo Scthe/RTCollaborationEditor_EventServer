@@ -5,9 +5,6 @@ var redis = require('redis'),
     util = require('util'),
     Q = require('q');
 
-var REDIS_PORT = 6379; // TODO move to config file
-var REDIS_HOST = 'localhost';
-
 // separate publisher needed since can't publish in subscribe mode
 var redis_publisher = defaultRedisClient('PUBLISHER');
 
@@ -78,7 +75,7 @@ function defaultRedisClient() {
   // redisClient.on('end', function() { console.log('redis( ' + name + ')-end'); });
   // redisClient.on('drain', function() { console.log('redis( ' + name + ')-drain : redis is bufferring !'); });
 
-  var client = redis.createClient(REDIS_PORT, REDIS_HOST);
+  var client = redis.createClient(config.redis_port, config.redis_host);
 
   var client_log_name = arguments.length > 0 ? arguments[0] : 'from socket';
   client.on('ready', function () {

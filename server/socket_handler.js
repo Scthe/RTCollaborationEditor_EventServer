@@ -5,8 +5,8 @@ var http = require('http'),
     _ = require('underscore'),
     RedisAdapter = require('./redis_adapter');
 
-module.exports = function (app, port) {
-  var server = http.createServer(app).listen(port);
+module.exports = function (app) {
+  var server = http.createServer(app).listen(config.socket_port);
   var io = socketIO(server);
 
   // create handler for socket connections
@@ -26,8 +26,6 @@ function onNewConnection(app, socket) {
   client_data.redis_adapter = new RedisAdapter(client_data,
     _.partial(on_message, socket),
     _.partial(on_user_status, socket));
-
-  console.log('[client_id]' + client_data.client_id);
 
   // socket callbacks
   socket.on('disconnect', _.partial(on_socket_disconnected, app, client_data));
