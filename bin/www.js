@@ -6,6 +6,8 @@
 var debug = require('debug')('chat2');
 var app = require('../app');
 
+GLOBAL.config = require('../utils/config_loader');
+
 app.set('port', process.env.PORT || 3000);
 
 var server = app.listen(app.get('port'), function () {
