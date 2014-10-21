@@ -31,6 +31,14 @@ module.exports = {
       /**
        * does not start HTML server
        */
+      'socket_only': true,
+      'socket_port': process.env.PORT,
+      'socket_host': process.env.IP
+      // client:
+      // var socket = io.connect('http://sublime_docs-server-c9-dbxmvqtn111.c9.io')
+    },
+
+    'sock': {
       'socket_only': true
     }
   }

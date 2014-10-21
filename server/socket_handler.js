@@ -1,4 +1,5 @@
 'use strict';
+/* global config */
 
 var http = require('http'),
     socketIO = require('socket.io'),
@@ -6,8 +7,15 @@ var http = require('http'),
     RedisAdapter = require('./redis_adapter');
 
 module.exports = function (app) {
-  var server = http.createServer(app).listen(config.socket_port);
-  var io = socketIO(server);
+
+  var server, io;
+  if (!config.socket_only) {
+    server = http.createServer(app).listen(config.socket_port);
+    io = socketIO(server);
+  } else {
+    server = http.createServer().listen(config.socket_port, config.socket_host);
+    io = socketIO.listen(server);
+  }
 
   // create handler for socket connections
   io.sockets.on('connection', _.partial(onNewConnection, app));

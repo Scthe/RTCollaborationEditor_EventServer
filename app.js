@@ -7,7 +7,6 @@ var bodyParser = require('body-parser');
 
 var routes = require('./server/routes/index');
 var registerSocketHandler = require('./server/socket_handler');
-var system_events_receiver = require('./server/server_events_receiver');
 
 var app = express();
 
@@ -28,9 +27,6 @@ app.use('/', routes);
 
 // configure socket server
 registerSocketHandler(app);
-
-// add node event handler
-system_events_receiver(app);
 
 
 // catch 404 and forward to error handler
