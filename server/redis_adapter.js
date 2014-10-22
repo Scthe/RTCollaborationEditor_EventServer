@@ -1,4 +1,5 @@
 'use strict';
+/*global config*/
 
 var redis = require('redis'),
     _ = require('underscore'),
@@ -24,12 +25,12 @@ var redis_publisher = defaultRedisClient('PUBLISHER');
 })();
 
 
-function RedisAdapter(client_data, msg_callback, user_status_callback) {
+function RedisAdapter(client_data, operation_callback, selection_callback, join_callback, disconnect_callback) {
   var that = this;
   this.client_data = client_data;
   this.redis_path = 'chat/room/' + client_data.chat_room;
   this.redis_user_count_path = 'chat/room/' + client_data.chat_room + '/user_list';
-  this._messageHandler = _.partial(this._messageHandlerProto, msg_callback, user_status_callback);
+  this._messageHandler = _.partial(this._messageHandlerProto, operation_callback, selection_callback, join_callback, disconnect_callback);
   this.client = defaultRedisClient();
 
   // subscribe client to chat room events
@@ -54,27 +55,33 @@ function RedisAdapter(client_data, msg_callback, user_status_callback) {
 
 RedisAdapter.prototype = {
   unsubscribe         : unsubscribe,
-  publish_message     : publish_message,
+  publish_operation   : publish_message,
+  publish_selection   : publish_selection,
   _getUserCount       : function () {
     return Q.denodeify(redis_publisher.scard)(this.redis_user_count_path);
   },
-  _messageHandlerProto: function (msg_callback, user_status_callback, ch, msg) {
+  _messageHandlerProto: function (operation_callback, selection_callback, join_callback, disconnect_callback, ch, msg) {
     /* jshint unused:false */ // ch is not used
     var m = JSON.parse(msg);
-    if (m.type === 'msg') { // TODO remove msg.type if, make it const time
-      msg_callback(m.payload);
-    } else {
-      user_status_callback(m.payload);
+    var data = m.payload;
+
+    // TODO remove msg.type if, make it const time
+    if (m.type === 'msg') {
+      operation_callback(data);
+    } else if (m.type === 'sel') {
+      selection_callback(data);
+    } else if (m.type === 'join') {
+      join_callback(data);
+    } else { // disconnect
+      disconnect_callback(data);
     }
   }
 };
 
 module.exports = RedisAdapter;
 
-function defaultRedisClient() {
-  // redisClient.on('end', function() { console.log('redis( ' + name + ')-end'); });
-  // redisClient.on('drain', function() { console.log('redis( ' + name + ')-drain : redis is bufferring !'); });
 
+function defaultRedisClient() {
   var client = redis.createClient(config.redis_port, config.redis_host);
 
   var client_log_name = arguments.length > 0 ? arguments[0] : 'from socket';
@@ -108,6 +115,12 @@ function unsubscribe() {
 function publish_message(msg) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var m = {type: 'msg', payload: msg};
+  redis_publisher.publish(this.redis_path, JSON.stringify(m));
+}
+
+function publish_selection(msg) {
+  /* jshint -W040 */ // binded to RedisAdapter prototype object
+  var m = {type: 'sel', payload: msg};
   redis_publisher.publish(this.redis_path, JSON.stringify(m));
 }
 

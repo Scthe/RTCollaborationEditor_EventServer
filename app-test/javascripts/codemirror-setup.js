@@ -1,15 +1,18 @@
+'use strict';
+/* global remoteInterface, CodeMirror*/
+
 var editor;
 
 $(document).ready(function () {
 
   //region init
-  var value = "// The bindings defined specifically in the Sublime Text mode\n";
-  value += "var bindings = {\n";
-  value += "}\n";
-  value += "\n";
-  value += "// The implementation of joinLines\n";
+  var value = '// The bindings defined specifically in the Sublime Text mode\n';
+  value += 'var bindings = {\n';
+  value += '}\n';
+  value += '\n';
+  value += '// The implementation of joinLines\n';
 
-  editor = CodeMirror(document.getElementById("editor"), {
+  editor = CodeMirror(document.getElementById('editor'), {
     value                  : value,
     lineNumbers            : true,
     autoCloseBrackets      : true,
@@ -26,33 +29,39 @@ $(document).ready(function () {
   //endregion
 
   // region set handlers
-  editor.on("change", function (instance, changeObj) {
-    console.log("change");
-  });
-//  editor.on("changes", function (instance, changes) {
-//    console.log("changes");
-//  });
-  editor.on("beforeChange", function (instance, changeObj) {
-//    console.log("beforeChange");
-//    console.log(changeObj);
+
+  editor.on('beforeChange', function (instance, changeObj) {
+    /* jshint unused:false */ // isntance is not used
     changeObj.cancel();
-    remoteInterface.send_message(changeObj);
+    remoteInterface.send_operation(changeObj);
   });
-  editor.on("cursorActivity", function (instance) {
+
+  editor.on('cursorActivity', function (instance) {
+    /* jshint unused:false */ // isntance is not used
     var selRange = editor.doc.sel.ranges[0];
-    console.log("[cursorActivity] " + selRange.anchor.line + ':' + selRange.anchor.ch + '  ' + selRange.head.line + ':' + selRange.head.ch);
-  });
-
-//  editor.on("beforeSelectionChange",function (instance, obj: {ranges, update}){});
-
-  editor.on("update", function (instance) {
-//    console.log("update");
+//    console.log('[cursorActivity] ' + selRange.anchor.line + ':' + selRange.anchor.ch + '  ' + selRange.head.line + ':' + selRange.head.ch);
+    remoteInterface.send_selection(selRange);
   });
 
   //endregion
 
-  remoteInterface.handler = function (changeObj) {
-    console.log(changeObj);
+  remoteInterface.on_operation = function (changeObj) {
+//    console.log(changeObj);
     editor.makeRemoteChange(changeObj);
-  }
+  };
+
+  remoteInterface.on_selection = function (selData) {
+    console.log(selData);
+  };
+
+  remoteInterface.on_reconnect = function (data) {
+//    console.log(changeObj);
+    $('#user_count').text(data.user_count);
+  };
+
+  remoteInterface.on_client_left = function (data) {
+//    console.log(changeObj);
+    $('#user_count').text(data.user_count);
+  };
+
 });
