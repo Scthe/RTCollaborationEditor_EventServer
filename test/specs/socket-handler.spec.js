@@ -58,6 +58,8 @@
           expect(redisAdapter.constructor).calledWithExactly(
             sinon.match.object,
             sinon.match.func,
+            sinon.match.func,
+            sinon.match.func,
             sinon.match.func);
           done();
         });
@@ -110,26 +112,49 @@
      });
      */
 
-    it('#on_socket_message propagates client messages to redis', function (done) {
-      socket.on('connect', function () {
-        var msgTmpl = {
-          data: {
-            a: faker.random.number()
-          }
-        };
+    describe('propagates to redis', function () {
 
-        RedisAdapterProxy.prototype.lastInstance.publish_message = function (msg) {
-          expect(msg).to.have.keys(['data', 'username']);
-          expect(msg.data).to.deep.equal(msgTmpl.data);
-          expect(msg.username).to.be.a('number');
-          done();
-        };
+      it('operations', function (done) {
+        socket.on('connect', function () {
+          var msgTmpl = {
+            data: {
+              a: faker.random.number()
+            }
+          };
 
-        socket.emit('message', msgTmpl);
+          RedisAdapterProxy.prototype.lastInstance.publish_operation = function (msg) {
+            expect(msg).to.have.keys(['data', 'username']);
+            expect(msg.data).to.deep.equal(msgTmpl.data);
+            expect(msg.username).to.be.a('number');
+            done();
+          };
+
+          socket.emit('operation', msgTmpl);
+        });
       });
+
+      it('selections', function (done) {
+        socket.on('connect', function () {
+          var msgTmpl = {
+            data: {
+              a: faker.random.number()
+            }
+          };
+
+          RedisAdapterProxy.prototype.lastInstance.publish_selection = function (msg) {
+            expect(msg).to.have.keys(['data', 'username']);
+            expect(msg.data).to.deep.equal(msgTmpl.data);
+            expect(msg.username).to.be.a('number');
+            done();
+          };
+
+          socket.emit('selection', msgTmpl);
+        });
+      });
+
     });
 
-    describe('propagates to user', function () {
+    describe('propagates to socket', function () {
 
       var msgTmpl;
 
@@ -141,20 +166,40 @@
         };
       });
 
-      it('#on_message', function (done) {
+      it('#emit_operation', function (done) {
         socket.on('connect', function () {
           RedisAdapterProxy.prototype.lastInstance.messageHandler(msgTmpl);
-          socket.on('message_return', function (data) {
+          socket.on('operation', function (data) {
             expect(data).to.deep.equal(msgTmpl);
             done();
           });
         });
       });
 
-      it('#on_user_status', function (done) {
+      it('#emit_selection', function (done) {
         socket.on('connect', function () {
-          RedisAdapterProxy.prototype.lastInstance.userStatusChangeHandler(msgTmpl);
-          socket.on('user_mgmt', function (data) {
+//          RedisAdapterProxy.prototype.lastInstance.userStatusChangeHandler(msgTmpl);
+          socket.on('selection', function (data) {
+            expect(data).to.deep.equal(msgTmpl);
+            done();
+          });
+        });
+      });
+
+      it('#emit_client_reconnected', function (done) {
+        socket.on('connect', function () {
+//          RedisAdapterProxy.prototype.lastInstance.userStatusChangeHandler(msgTmpl);
+          socket.on('reconnect', function (data) {
+            expect(data).to.deep.equal(msgTmpl);
+            done();
+          });
+        });
+      });
+
+      it('#emit_client_left', function (done) {
+        socket.on('connect', function () {
+//          RedisAdapterProxy.prototype.lastInstance.userStatusChangeHandler(msgTmpl);
+          socket.on('client_left', function (data) {
             expect(data).to.deep.equal(msgTmpl);
             done();
           });
@@ -165,20 +210,23 @@
 
   });
 
-  function RedisAdapterProxy(clientData, messageHandler, userStatusChangeHandler) {
+  function RedisAdapterProxy(clientData, f1, f2, f3, f4) {
     /* jshint unused:false */ // clientData is not used
     this.constructor = sinon.spy();
     this.constructor.apply(this, arguments);
     RedisAdapterProxy.prototype.lastInstance = this;
 
-    this.messageHandler = messageHandler;
-    this.userStatusChangeHandler = userStatusChangeHandler;
+//    this.messageHandler = f1;
+//    this.f2 = f2;
+//    this.f3 = f3;
+//    this.userStatusChangeHandler = f4;
   }
 
   RedisAdapterProxy.prototype = {
-    unsubscribe    : sinon.spy(),
-    publish_message: sinon.spy(),
-    lastInstance   : undefined
+    unsubscribe      : sinon.spy(),
+    publish_operation: sinon.spy(),
+    publish_selection: sinon.spy(),
+    lastInstance     : undefined
   };
 
 })();
