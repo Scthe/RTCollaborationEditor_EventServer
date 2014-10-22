@@ -47,7 +47,7 @@ $(document).ready(function () {
 
   remoteInterface.on_operation = function (changeObj) {
 //    console.log(changeObj);
-    editor.makeRemoteChange(changeObj);
+    editor.makeRemoteChange(changeObj.data);
   };
 
   remoteInterface.on_selection = function (selData) {
@@ -55,12 +55,12 @@ $(document).ready(function () {
   };
 
   remoteInterface.on_reconnect = function (data) {
-//    console.log(changeObj);
+    console.log(data);
     $('#user_count').text(data.user_count);
   };
 
   remoteInterface.on_client_left = function (data) {
-//    console.log(changeObj);
+//    console.log(data);
     $('#user_count').text(data.user_count);
   };
 

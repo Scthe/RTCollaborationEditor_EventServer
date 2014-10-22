@@ -37,7 +37,6 @@ function RedisAdapter(client_data, operation_callback, selection_callback, join_
   // THEN set the message callback AND add client to the chat room list ( sadd := set add)
   // THEN get client count after changes
   // THEN publish 'client connected' event to queue
-  var msgText = 'user \'' + client_data.client_id + '\' connected';
   var redis_subscribe = Q.nbind(this.client.subscribe, this.client);
 
   redis_subscribe(this.redis_path)
@@ -48,7 +47,7 @@ function RedisAdapter(client_data, operation_callback, selection_callback, join_
       return redisAddClient(that.redis_user_count_path, client_data.client_id);
     })
     .then(that._getUserCount.bind(that))
-    .then(publishUserMgmtMessage.bind(that, msgText))
+    .then(publishUserJoin.bind(that, that.client_data))
     .catch(console.printStackTrace)
     .done();
 }
@@ -58,7 +57,7 @@ RedisAdapter.prototype = {
   publish_operation   : publish_message,
   publish_selection   : publish_selection,
   _getUserCount       : function () {
-    return Q.denodeify(redis_publisher.scard)(this.redis_user_count_path);
+    return Q.denodeify(redis_publisher.scard.bind(redis_publisher, this.redis_user_count_path))();
   },
   _messageHandlerProto: function (operation_callback, selection_callback, join_callback, disconnect_callback, ch, msg) {
     /* jshint unused:false */ // ch is not used
@@ -98,7 +97,6 @@ function unsubscribe() {
   that.client.quit();
 
   var client_id = that.client_data.client_id;
-  var msgText = 'user \'' + client_id + '\' disconnected';
 
   // remove client from list of client for this chat room ( srem := set remove)
   // THEN get client count after changes
@@ -107,7 +105,7 @@ function unsubscribe() {
 
   redisRemoveClient(that.redis_user_count_path, client_id)
     .then(that._getUserCount.bind(that))
-    .then(publishUserMgmtMessage.bind(that, msgText))
+    .then(publishUserLeft.bind(that, that.client_data))
     .catch(console.printStackTrace)
     .done();
 }
@@ -124,12 +122,23 @@ function publish_selection(msg) {
   redis_publisher.publish(this.redis_path, JSON.stringify(m));
 }
 
-function publishUserMgmtMessage(texxt, count) {
+function publishUserJoin(clientData, count) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var m = {
-    type   : 'user_mgmt',
-    payload: { text: texxt, user_count: count }
+    type   : 'join',
+    payload: { client: clientData.client_id, user_count: count }
   };
   var redisPublish = Q.nbind(redis_publisher.publish, redis_publisher);
   return redisPublish(this.redis_path, JSON.stringify(m));
 }
+
+function publishUserLeft(clientData, count) {
+  /* jshint -W040 */ // binded to RedisAdapter prototype object
+  var m = {
+    type   : 'left',
+    payload: { client: clientData.client_id, user_count: count }
+  };
+  var redisPublish = Q.nbind(redis_publisher.publish, redis_publisher);
+  return redisPublish(this.redis_path, JSON.stringify(m));
+}
+

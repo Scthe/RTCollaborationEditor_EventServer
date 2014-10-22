@@ -10,22 +10,22 @@ $(document).ready(function () {
   // listen on message_return channel
   socket.on('operation', function (data) {
     console.log(data);
-    remoteInterface.on_operation(data.data);
+    remoteInterface.on_operation(data);
   });
 
   socket.on('selection', function (data) {
 //    console.log(data);
-    remoteInterface.on_selection(data.data);
+    remoteInterface.on_selection(data);
   });
 
   socket.on('reconnect', function (data) {
     console.log(data);
-    remoteInterface.on_reconnect(data.data);
+    remoteInterface.on_reconnect(data);
   });
 
   socket.on('client_left', function (data) {
     console.log(data);
-    remoteInterface.on_client_left(data.data);
+    remoteInterface.on_client_left(data);
   });
 
   function send_operation(msg) {
