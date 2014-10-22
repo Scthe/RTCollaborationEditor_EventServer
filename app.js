@@ -6,8 +6,7 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
 var routes = require('./server/routes/index');
-var socket_handler = require('./server/socket_handler');
-var system_events_receiver = require('./server/server_events_receiver');
+var registerSocketHandler = require('./server/socket_handler');
 
 var app = express();
 
@@ -25,8 +24,10 @@ app.use(express.static(path.join(__dirname, 'app-test')));
 
 app.use('/', routes);
 
-socket_handler(app, 8082); // TODO move socket port to config file
-system_events_receiver(app);
+
+// configure socket server
+registerSocketHandler(app);
+
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

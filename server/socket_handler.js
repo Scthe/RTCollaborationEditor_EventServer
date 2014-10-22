@@ -1,13 +1,21 @@
 'use strict';
+/* global config */
 
 var http = require('http'),
     socketIO = require('socket.io'),
     _ = require('underscore'),
     RedisAdapter = require('./redis_adapter');
 
-module.exports = function (app, port) {
-  var server = http.createServer(app).listen(port);
-  var io = socketIO(server);
+module.exports = function (app) {
+
+  var server, io;
+  if (!config.socket_only) {
+    server = http.createServer(app).listen(config.socket_port);
+    io = socketIO(server);
+  } else {
+    server = http.createServer().listen(config.socket_port, config.socket_host);
+    io = socketIO.listen(server);
+  }
 
   // create handler for socket connections
   io.sockets.on('connection', _.partial(onNewConnection, app));
@@ -26,8 +34,6 @@ function onNewConnection(app, socket) {
   client_data.redis_adapter = new RedisAdapter(client_data,
     _.partial(on_message, socket),
     _.partial(on_user_status, socket));
-
-  console.log('[client_id]' + client_data.client_id);
 
   // socket callbacks
   socket.on('disconnect', _.partial(on_socket_disconnected, app, client_data));

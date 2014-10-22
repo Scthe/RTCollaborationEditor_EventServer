@@ -10,6 +10,8 @@
       SOCKET_PORT = 8082,
       SOCKET_HOST = 'localhost';
 
+  GLOBAL.config = {socket_port: SOCKET_PORT};
+
 
   describe('SocketHandler', function () {
 

@@ -53,7 +53,7 @@ PromiseSync.prototype.then = function (f) {
   return promise;
 };
 
-PromiseSync.prototype.catch = function (f) {
+PromiseSync.prototype['catch'] = function (f) {
   debug('promise#catch');
   if (this.err) {
     debug(this.err.stack);
