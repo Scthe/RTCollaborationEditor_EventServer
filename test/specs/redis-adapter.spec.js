@@ -126,9 +126,9 @@
           // second arg should be stringified JSON
           publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
           var msgTemplate = {
-            type   : 'user_mgmt',
+            type   : 'join',
             payload: {
-              text: sinon.match.string
+              client: sinon.match.number
             }
           };
           expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
@@ -167,18 +167,23 @@
 
     });
 
-    describe('#publish_message', function () {
+    describe('publish', function () {
 
-      it('works', function () {
-        var publisher = _.clone(redisVoidProxy);
+      var publisher,
+          adapter;
+
+      beforeEach(function () {
+        publisher = _.clone(redisVoidProxy);
         publisher.publish = sinon.spy();
         redisLibraryCreateClient.onFirstCall().returns(publisher);
 
         var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
-        var adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction, voidFunction, voidFunction);
+      });
 
+      it('operation', function () {
         var msg = faker.lorem.sentence();
-        adapter.publish_message(msg);
+        adapter.publish_operation(msg);
 
         expect(publisher.publish).called;
         expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
@@ -189,6 +194,92 @@
 
         expect(publisher.publish).calledWith(adapter.redis_path, sinon.match({ type: 'msg', payload: msg }));
       });
+
+      it('selection', function () {
+        var msg = faker.lorem.sentence();
+        adapter.publish_selection(msg);
+
+        expect(publisher.publish).called;
+        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
+        // second arg should be stringified JSON
+        for (var i = 0; i < publisher.publish.args.length; i++) {
+          publisher.publish.args[i][1] = JSON.parse(publisher.publish.args[i][1]);
+        }
+
+        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match({ type: 'sel', payload: msg }));
+      });
+
+    });
+
+    describe('calls callbacks', function () {
+
+      var publisher,
+          adapter,
+          operation_callback,
+          selection_callback,
+          join_callback,
+          disconnect_callback,
+          message;
+
+      beforeEach(function () {
+        publisher = _.clone(redisVoidProxy);
+        publisher.publish = sinon.spy();
+        redisLibraryCreateClient.onFirstCall().returns(publisher);
+
+        operation_callback = sinon.spy();
+        selection_callback = sinon.spy();
+        join_callback = sinon.spy();
+        disconnect_callback = sinon.spy();
+
+        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+        adapter = new RedisAdapter(clientData, operation_callback, selection_callback, join_callback, disconnect_callback);
+      });
+
+      it('operation', function () {
+        adapter._messageHandler(undefined, createMessage('msg'));
+        expect(operation_callback).called;
+        expect(operation_callback).calledWith(message.payload);
+      });
+
+      it('selection', function () {
+        adapter._messageHandler(undefined, createMessage('sel'));
+        expect(selection_callback).called;
+        expect(selection_callback).calledWith(message.payload);
+      });
+
+      it('user join', function () {
+        message = {
+          type   : 'join',
+          payload: {
+            client    : faker.random.number(),
+            user_count: faker.random.number()
+          }
+        };
+        adapter._messageHandler(undefined, JSON.stringify(message));
+        expect(join_callback).called;
+        expect(join_callback).calledWith(message.payload);
+      });
+
+      it('user left', function () {
+        message = {
+          type   : 'left',
+          payload: {
+            client    : faker.random.number(),
+            user_count: faker.random.number()
+          }
+        };
+        adapter._messageHandler(undefined, JSON.stringify(message));
+        expect(disconnect_callback).called;
+        expect(disconnect_callback).calledWith(message.payload);
+      });
+
+      function createMessage(type_) {
+        message = {
+          type   : type_,
+          payload: faker.random.number()
+        };
+        return JSON.stringify(message);
+      }
 
     });
 
@@ -238,6 +329,8 @@
       it('broadcasts event \'user #{client_id} disconnected\'', function (done) {
         var publisher = _.clone(redisVoidProxy);
         publisher.publish = sinon.spy();
+        var fakeUserCount = faker.random.number();
+        publisher.scard = sinon.stub().returns(fakeUserCount);
         redisLibraryCreateClient.onFirstCall().returns(publisher);
 
         var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
@@ -247,11 +340,12 @@
           expect(publisher.publish).called;
           expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
           // second arg should be stringified JSON
-          publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
+          publisher.publish.args[1][1] = JSON.parse(publisher.publish.args[1][1]);
           var msgTemplate = {
-            type   : 'user_mgmt',
+            type   : 'left',
             payload: {
-              text: sinon.match.string
+              client    : clientData.client_id,
+              user_count: fakeUserCount
             }
           };
           expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
@@ -260,7 +354,6 @@
         adapter.unsubscribe();
       });
 
-      // TODO broadcasts id of disconnected client, so that client can create msg on it's own
     });
 
   });
