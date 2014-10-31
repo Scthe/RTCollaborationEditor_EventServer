@@ -32,14 +32,11 @@ function onNewConnection(app, socket) {
   };
 
   // server to client sending channel
-  var toClientEmitter = function (channel, data) {// TODO simplify
-    socket.emit(channel, data);
-  };
   var emitterCallbacks = {
-    operation : _.partial(toClientEmitter, 'operation'),
-    selection : _.partial(toClientEmitter, 'selection'),
-    join      : _.partial(toClientEmitter, 'reconnect'),
-    disconnect: _.partial(toClientEmitter, 'client_left')
+    operation : socket.emit.bind(socket, 'operation'),
+    selection : socket.emit.bind(socket, 'selection'),
+    join      : socket.emit.bind(socket, 'reconnect'),
+    disconnect: socket.emit.bind(socket, 'client_left')
   };
 
   // create logic module
