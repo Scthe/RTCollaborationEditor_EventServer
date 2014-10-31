@@ -184,6 +184,9 @@
   }
 
   PipelineProxy.prototype = {
+    // ( functions below are binded in constructor which limits their testability
+    // (binding process creates separate object to which we do not have access).
+    // by forwarding calls to different object we can overcome this limitation )
 
     onDisconnected    : function () {
       pipelineForwardedCalls._onDisconnected.apply(this, arguments);
