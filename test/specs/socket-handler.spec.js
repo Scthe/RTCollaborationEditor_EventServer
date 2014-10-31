@@ -14,7 +14,7 @@
 
   var pipelineForwardedCalls;
 
-  describe.only('SocketHandler', function () {
+  describe('SocketHandler', function () {
 
     var server, // normal host&port server as underlying for socket connection receiver
         app,// node application state f.e some messages are published on this object

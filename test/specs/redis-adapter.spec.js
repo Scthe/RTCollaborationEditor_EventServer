@@ -8,7 +8,7 @@
   var proxyquire = require('proxyquire').noCallThru(),
       _ = require('underscore');
 
-  describe('RedisAdapter', function () {
+  describe.only('RedisAdapter', function () {
 
     var redisVoidProxy;
     var redisLibraryCreateClient,
@@ -78,6 +78,9 @@
       expect(monitorSpy.on).to.be.calledTwice;
       expect(monitorSpy.monitor).to.be.calledOnce;
     });
+
+    // TODO create utils function requireRedisAdapter( redisProxy1, redisProxy2, redisProxy3),
+    // where redisProxyX is object containing overrides for redisVoidProxy
 
     describe('#create', function () {
 
@@ -215,10 +218,7 @@
 
       var publisher,
           adapter,
-          operation_callback,
-          selection_callback,
-          join_callback,
-          disconnect_callback,
+          messageCallbacks,
           message;
 
       beforeEach(function () {
@@ -226,25 +226,27 @@
         publisher.publish = sinon.spy();
         redisLibraryCreateClient.onFirstCall().returns(publisher);
 
-        operation_callback = sinon.spy();
-        selection_callback = sinon.spy();
-        join_callback = sinon.spy();
-        disconnect_callback = sinon.spy();
+        messageCallbacks = {
+          operation : sinon.spy(),
+          selection : sinon.spy(),
+          join      : sinon.spy(),
+          disconnect: sinon.spy()
+        };
 
         var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
-        adapter = new RedisAdapter(clientData, operation_callback, selection_callback, join_callback, disconnect_callback);
+        adapter = new RedisAdapter(clientData, messageCallbacks);
       });
 
       it('operation', function () {
         adapter._messageHandler(undefined, createMessage('msg'));
-        expect(operation_callback).called;
-        expect(operation_callback).calledWith(message.payload);
+        expect(messageCallbacks.operation).called;
+        expect(messageCallbacks.operation).calledWith(message.payload);
       });
 
       it('selection', function () {
         adapter._messageHandler(undefined, createMessage('sel'));
-        expect(selection_callback).called;
-        expect(selection_callback).calledWith(message.payload);
+        expect(messageCallbacks.selection).called;
+        expect(messageCallbacks.selection).calledWith(message.payload);
       });
 
       it('user join', function () {
@@ -256,8 +258,8 @@
           }
         };
         adapter._messageHandler(undefined, JSON.stringify(message));
-        expect(join_callback).called;
-        expect(join_callback).calledWith(message.payload);
+        expect(messageCallbacks.join).called;
+        expect(messageCallbacks.join).calledWith(message.payload);
       });
 
       it('user left', function () {
@@ -269,8 +271,8 @@
           }
         };
         adapter._messageHandler(undefined, JSON.stringify(message));
-        expect(disconnect_callback).called;
-        expect(disconnect_callback).calledWith(message.payload);
+        expect(messageCallbacks.disconnect).called;
+        expect(messageCallbacks.disconnect).calledWith(message.payload);
       });
 
       function createMessage(type_) {
