@@ -53,15 +53,6 @@
       }
     });
 
-    /*
-     TODO replace:
-     it('#disconnect', function (done) {
-     socket.on('connect', function () {
-     }}
-
-     with it_
-     */
-
     it('connects', function (done) {
       socket.on('connect', function () {
         done();
@@ -70,18 +61,16 @@
 
     describe('#connected', function () {
 
-      it('creates pipeline for message processing', function (done) {
-        socket.on('connect', function () {
-          expect(PipelineProxy.prototype.lastInstance).to.exist;
-          var pipeline = PipelineProxy.prototype.lastInstance;
-          expect(pipeline.constructor).calledOnce;
-          expect(pipeline.constructor).calledWithExactly(
-            app,
-            sinon.match.object,
-            sinon.match.object);
+      it_('creates pipeline for message processing', function (done) {
+        expect(PipelineProxy.prototype.lastInstance).to.exist;
+        var pipeline = PipelineProxy.prototype.lastInstance;
+        expect(pipeline.constructor).calledOnce;
+        expect(pipeline.constructor).calledWithExactly(
+          app,
+          sinon.match.object,
+          sinon.match.object);
 
-          done();
-        });
+        done();
       });
 
       // TODO add tests for reading proper client data
@@ -100,24 +89,20 @@
         };
       });
 
-      it('#emit_operation', function (done) {
-        socket.on('connect', function () {
-          pipelineForwardedCalls._onOperationMessage = function (data) {
-            expect(data).to.deep.equal(msgTmpl);
-            done();
-          };
-          socket.emit('operation', msgTmpl);
-        });
+      it_('#emit_operation', function (done) {
+        pipelineForwardedCalls._onOperationMessage = function (data) {
+          expect(data).to.deep.equal(msgTmpl);
+          done();
+        };
+        socket.emit('operation', msgTmpl);
       });
 
-      it('#emit_selection', function (done) {
-        socket.on('connect', function () {
-          pipelineForwardedCalls._onSelectionMessage = function (data) {
-            expect(data).to.deep.equal(msgTmpl);
-            done();
-          };
-          socket.emit('selection', msgTmpl);
-        });
+      it_('#emit_selection', function (done) {
+        pipelineForwardedCalls._onSelectionMessage = function (data) {
+          expect(data).to.deep.equal(msgTmpl);
+          done();
+        };
+        socket.emit('selection', msgTmpl);
       });
 
       /* TODO #disconnect test
@@ -145,65 +130,43 @@
         };
       });
 
-      // TODO: We could use for loop to create this tests as they are nearly exactly the same
+      var tests = [
+        ['#emit_operation', 'operation', 'operation'],
+        ['#emit_selection', 'selection', 'selection'],
+        ['#emit_reconnect', 'reconnect', 'join'],
+        ['#emit_client_left', 'client_left', 'disconnect']
+      ];
 
-      it('#emit_operation', function (done) {
-        socket.on('connect', function () {
-          // send through provided callback interface
-          var sender = PipelineProxy.prototype.lastInstance.emitterCallbacks;
-          sender.operation(msgTmpl);
+      // create the test for us since they are in 90% the same
+      for (var i = 0; i < tests.length; i++) {
+        var testName = tests[i][0] + '2',
+            testChannel = tests[i][1],
+            senderMethod = tests[i][2];
 
-          // expect to receive
-          socket.on('operation', function (data) {
-            expect(data).to.deep.equal(msgTmpl);
-            done();
-          });
+        it_(testName, testCase.bind(undefined, testChannel, senderMethod));
+      }
+
+      function testCase(testChannel, senderMethod, done) {
+        // send through provided callback interface
+        var sender = PipelineProxy.prototype.lastInstance.emitterCallbacks;
+        sender[senderMethod](msgTmpl);
+
+        // expect to receive
+        socket.on(testChannel, function (data) {
+          expect(data).to.deep.equal(msgTmpl);
+          done();
         });
-      });
-
-      it('#emit_selection', function (done) {
-        socket.on('connect', function () {
-          // send through provided callback interface
-          var sender = PipelineProxy.prototype.lastInstance.emitterCallbacks;
-          sender.selection(msgTmpl);
-
-          // expect to receive
-          socket.on('selection', function (data) {
-            expect(data).to.deep.equal(msgTmpl);
-            done();
-          });
-        });
-      });
-
-      it('#emit_reconnect', function (done) {
-        socket.on('connect', function () {
-          // send through provided callback interface
-          var sender = PipelineProxy.prototype.lastInstance.emitterCallbacks;
-          sender.join(msgTmpl);
-
-          // expect to receive
-          socket.on('reconnect', function (data) {
-            expect(data).to.deep.equal(msgTmpl);
-            done();
-          });
-        });
-      });
-
-      it('#emit_client_left', function (done) {
-        socket.on('connect', function () {
-          // send through provided callback interface
-          var sender = PipelineProxy.prototype.lastInstance.emitterCallbacks;
-          sender.disconnect(msgTmpl);
-
-          // expect to receive
-          socket.on('client_left', function (data) {
-            expect(data).to.deep.equal(msgTmpl);
-            done();
-          });
-        });
-      });
+      }
 
     });
+
+    function it_(name, f) {
+      it(name, function (done) {
+        socket.on('connect', function () {
+          f(done);
+        });
+      });
+    }
 
   });
 
@@ -212,7 +175,7 @@
     this.constructor = sinon.spy();
     this.constructor.apply(this, arguments);
 
-    this.app = app;
+//    this.app = app;
     this.client_data = client_data;
     this.emitterCallbacks = emitterCallbacks;
 
