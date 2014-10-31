@@ -7,7 +7,7 @@
 
   var proxyquire = require('proxyquire').noCallThru();
 
-  describe.only('Pipeline', function () {
+  describe('Pipeline', function () {
 
     var app,// node application state f.e some messages are published on this object
         Pipeline,
@@ -62,21 +62,6 @@
 
     });
 
-    /*
-     var msgTmpl = {
-     data: {
-     a: faker.random.number()
-     }
-     };
-
-     RedisAdapterProxy.prototype.lastInstance.publish_selection = function (msg) {
-     expect(msg).to.have.keys(['data', 'username']);
-     expect(msg.data).to.deep.equal(msgTmpl.data);
-     expect(msg.username).to.be.a('number');
-     done();
-     };
-     */
-
     describe('#onDisconnected', function () {
 
       it('propagates to redis', function () {
@@ -92,8 +77,6 @@
       });
 
       it('propagates to node message bus', function () {
-        /* jshint -W031 */ // well that's cute
-
         var pipeline = new Pipeline(app, clientData);
         var emitter = {};
         emitter.emit = sinon.spy();
@@ -129,7 +112,7 @@
         expect(redisAdapter.publish_operation).calledWithExactly(msgTmpl);
       });
 
-      it.only('adds to the message creator\'s id', function () {
+      it('adds to the message creator\'s id', function () {
         var pipeline = new Pipeline(app, clientData);
         var usernamePattern = {
           username: clientData.client_id,
@@ -167,7 +150,7 @@
         expect(redisAdapter.publish_selection).calledWithExactly(msgTmpl);
       });
 
-      it.only('adds to the message creator\'s id', function () {
+      it('adds to the message creator\'s id', function () {
         var pipeline = new Pipeline(app, clientData);
         var usernamePattern = {
           username: clientData.client_id,
@@ -185,8 +168,7 @@
 
   });
 
-  function RedisAdapterProxy(clientData, callbacks) {
-    /* jshint unused:false */ // clientData is not used
+  function RedisAdapterProxy() {
     this.constructor = sinon.spy();
     this.constructor.apply(this, arguments);
 

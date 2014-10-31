@@ -139,7 +139,7 @@
 
       // create the test for us since they are in 90% the same
       for (var i = 0; i < tests.length; i++) {
-        var testName = tests[i][0] + '2',
+        var testName = tests[i][0],
             testChannel = tests[i][1],
             senderMethod = tests[i][2];
 
