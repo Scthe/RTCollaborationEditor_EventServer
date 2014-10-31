@@ -25,12 +25,12 @@ var redis_publisher = defaultRedisClient('PUBLISHER');
 })();
 
 
-function RedisAdapter(client_data, operation_callback, selection_callback, join_callback, disconnect_callback) {
+function RedisAdapter(client_data, msgCallbacks) {
   var that = this;
   this.client_data = client_data;
   this.redis_path = 'chat/room/' + client_data.chat_room;
   this.redis_user_count_path = 'chat/room/' + client_data.chat_room + '/user_list';
-  this._messageHandler = _.partial(this._messageHandlerProto, operation_callback, selection_callback, join_callback, disconnect_callback);
+  this._messageHandler = _.partial(_messageHandlerProto, msgCallbacks);
   this.client = defaultRedisClient();
 
   // subscribe client to chat room events
@@ -53,32 +53,33 @@ function RedisAdapter(client_data, operation_callback, selection_callback, join_
 }
 
 RedisAdapter.prototype = {
-  unsubscribe         : unsubscribe,
-  publish_operation   : publish_message,
-  publish_selection   : publish_selection,
-  _getUserCount       : function () {
+  unsubscribe      : unsubscribe,
+  publish_operation: publish_message,
+  publish_selection: publish_selection,
+  _getUserCount    : function () {
     return Q.denodeify(redis_publisher.scard.bind(redis_publisher, this.redis_user_count_path))();
-  },
-  _messageHandlerProto: function (operation_callback, selection_callback, join_callback, disconnect_callback, ch, msg) {
-    /* jshint unused:false */ // ch is not used
-    var m = JSON.parse(msg);
-    var data = m.payload;
-
-    // TODO remove msg.type if, make it const time
-    if (m.type === 'msg') {
-      operation_callback(data);
-    } else if (m.type === 'sel') {
-      selection_callback(data);
-    } else if (m.type === 'join') {
-      join_callback(data);
-    } else { // disconnect
-      disconnect_callback(data);
-    }
   }
 };
 
 module.exports = RedisAdapter;
 
+
+function _messageHandlerProto(msgCallbacks, ch, msg) {
+  /* jshint unused:false */ // ch is not used
+  var m = JSON.parse(msg);
+  var data = m.payload;
+
+  // TODO remove msg.type if, make it const time
+  if (m.type === 'msg') {
+    msgCallbacks.operation(data);
+  } else if (m.type === 'sel') {
+    msgCallbacks.selection(data);
+  } else if (m.type === 'join') {
+    msgCallbacks.join(data);
+  } else { // disconnect
+    msgCallbacks.disconnect(data);
+  }
+}
 
 function defaultRedisClient() {
   var client = redis.createClient(config.redis_port, config.redis_host);
