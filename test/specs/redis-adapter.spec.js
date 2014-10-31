@@ -10,10 +10,13 @@
 
   describe('RedisAdapter', function () {
 
-    var redisVoidProxy;
-    var redisLibraryCreateClient,
+//    var redisVoidProxy;
+//    var redisLibraryCreateClient,
+//        clientData,
+//        redisAdapterModuleOverrides,
+//        adapter;
+    var redisVoidProxy,
         clientData,
-        redisAdapterModuleOverrides,
         adapter;
 
     beforeEach(function () {
@@ -28,20 +31,9 @@
         quit     : voidFunction
       };
 
-      redisLibraryCreateClient = sinon.stub();
-      redisLibraryCreateClient.onFirstCall().returns(redisVoidProxy);
-      redisLibraryCreateClient.onSecondCall().returns(redisVoidProxy);
-      redisLibraryCreateClient.onThirdCall().returns(redisVoidProxy);
-      var redisLibraryStub = {createClient: redisLibraryCreateClient};
-
       clientData = {
         chat_room: faker.internet.password(),
         client_id: faker.random.number()
-      };
-
-      redisAdapterModuleOverrides = {
-        'redis': redisLibraryStub,
-        'q'    : PromiseSync
       };
     });
 
@@ -53,13 +45,8 @@
       var publisherSpy = {
         on: sinon.spy()
       };
-      var redisLibraryCreateClient = sinon.stub();
-      redisLibraryCreateClient.onFirstCall().returns(publisherSpy);
-      redisLibraryCreateClient.onSecondCall().returns(redisVoidProxy);
-      var redisLibraryStub = {createClient: redisLibraryCreateClient};
 
-      proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
-
+      requireRedisAdapter(publisherSpy);
       expect(publisherSpy.on).to.be.calledOnce;
     });
 
@@ -68,35 +55,24 @@
         on     : sinon.spy(),
         monitor: sinon.spy()
       };
-      var redisLibraryCreateClient = sinon.stub();
-      redisLibraryCreateClient.onFirstCall().returns(redisVoidProxy);
-      redisLibraryCreateClient.onSecondCall().returns(monitorSpy);
-      var redisLibraryStub = {createClient: redisLibraryCreateClient};
 
-      proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
-
+      requireRedisAdapter(undefined, monitorSpy);
       expect(monitorSpy.on).to.be.calledTwice;
       expect(monitorSpy.monitor).to.be.calledOnce;
     });
 
-    // TODO create utils function requireRedisAdapter( redisProxy1, redisProxy2, redisProxy3),
-    // where redisProxyX is object containing overrides for redisVoidProxy
-
     describe('#create', function () {
 
       it('returns valid object', function () {
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
-
+        var RedisAdapter = requireRedisAdapter();
         var obj = new RedisAdapter(clientData, voidFunction, voidFunction);
         expect(obj).to.exist;
       });
 
       it('subscribes client to redis queue', function () {
-        var client = _.clone(redisVoidProxy);
-        client.subscribe = sinon.spy();
-        redisLibraryCreateClient.onThirdCall().returns(client);
+        var client = {subscribe: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(undefined, undefined, client);
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
 
         expect(client.subscribe).called;
@@ -104,9 +80,8 @@
       });
 
       it('adds client to document active users list', function (done) {
-        var publisher = _.clone(redisVoidProxy);
-        publisher.sadd = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
+        var publisher = {sadd: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
 
         PromiseSync.doneCallback = function () {
           expect(publisher.sadd).calledOnce;
@@ -114,14 +89,12 @@
           done();
         };
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
       it('broadcasts event \'new user\'', function (done) {
-        var publisher = _.clone(redisVoidProxy);
-        publisher.publish = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
+        var publisher = {publish: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
 
         PromiseSync.doneCallback = function () {
           expect(publisher.publish).called;
@@ -138,15 +111,15 @@
           done();
         };
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
       it('publishes correct user count', function (done) {
-        var publisher = _.clone(redisVoidProxy);
-        publisher.scard = sinon.stub().returns(faker.random.number());
-        publisher.publish = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
+        var publisher = {
+          publish: sinon.spy(),
+          scard  : sinon.stub().returns(faker.random.number())
+        };
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
 
         PromiseSync.doneCallback = function () {
           expect(publisher.scard).called;
@@ -164,7 +137,6 @@
           done();
         };
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
@@ -176,11 +148,9 @@
           adapter;
 
       beforeEach(function () {
-        publisher = _.clone(redisVoidProxy);
-        publisher.publish = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
+        publisher = {publish: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction, voidFunction, voidFunction);
       });
 
@@ -222,9 +192,8 @@
           message;
 
       beforeEach(function () {
-        publisher = _.clone(redisVoidProxy);
-        publisher.publish = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
+        publisher = {publish: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
 
         messageCallbacks = {
           operation : sinon.spy(),
@@ -233,7 +202,6 @@
           disconnect: sinon.spy()
         };
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, messageCallbacks);
       });
 
@@ -288,11 +256,8 @@
     describe('#unsubscribe', function () {
 
       it('removes client from document\'s active users list', function () {
-        var publisher = _.clone(redisVoidProxy);
-        publisher.srem = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
-
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+        var publisher = {srem: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
 
         adapter.unsubscribe();
@@ -302,12 +267,11 @@
       });
 
       it('publishes correct user count', function (done) { // TODO same as #create.publishes-correct-user-count
-        var publisher = _.clone(redisVoidProxy);
-        publisher.scard = sinon.stub().returns(faker.random.number());
-        publisher.publish = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
-
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+        var publisher = {
+          publish: sinon.spy(),
+          scard  : sinon.stub().returns(faker.random.number())
+        };
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
 
         PromiseSync.doneCallback = function () {
@@ -329,14 +293,14 @@
       });
 
       it('broadcasts event \'user #{client_id} disconnected\'', function (done) {
-        var publisher = _.clone(redisVoidProxy);
-        publisher.publish = sinon.spy();
         var fakeUserCount = faker.random.number();
-        publisher.scard = sinon.stub().returns(fakeUserCount);
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
-
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+        var publisher = {
+          publish: sinon.spy(),
+          scard  : sinon.stub().returns(fakeUserCount)
+        };
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
 
         PromiseSync.doneCallback = function () {
           expect(publisher.publish).called;
@@ -357,6 +321,39 @@
       });
 
     });
+
+
+    /**
+     *
+     * @param redisProxy1 publisher object
+     * @param redisProxy2 monitor object
+     * @param redisProxy3
+     * @returns {*} module with stubbed all superfluous dependencies
+     */
+    function requireRedisAdapter(redisProxy1, redisProxy2, redisProxy3) {
+      var r1 = createRedisClientInstance(redisProxy1),
+          r2 = createRedisClientInstance(redisProxy2),
+          r3 = createRedisClientInstance(redisProxy3);
+
+      var redisLibraryCreateClient = sinon.stub();
+      redisLibraryCreateClient.onFirstCall().returns(r1);
+      redisLibraryCreateClient.onSecondCall().returns(r2);
+      redisLibraryCreateClient.onThirdCall().returns(r3);
+      var redisLibrary = {createClient: redisLibraryCreateClient};
+
+      var redisAdapterModuleOverrides = {
+        'redis': redisLibrary,
+        'q'    : PromiseSync
+      };
+
+      return proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+
+      function createRedisClientInstance(overrides) {
+        var overrides_ = overrides ? overrides : {};
+        var o = _.clone(redisVoidProxy);
+        return _.extend(o, overrides_);
+      }
+    }
 
   });
 
