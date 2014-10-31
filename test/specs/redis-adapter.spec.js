@@ -8,7 +8,7 @@
   var proxyquire = require('proxyquire').noCallThru(),
       _ = require('underscore');
 
-  describe.only('RedisAdapter', function () {
+  describe('RedisAdapter', function () {
 
     var redisVoidProxy;
     var redisLibraryCreateClient,
