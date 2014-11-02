@@ -8,7 +8,7 @@
   var proxyquire = require('proxyquire').noCallThru(),
       _ = require('underscore');
 
-  describe.only('RedisAdapter', function () {
+  describe('RedisAdapter', function () {
 
     var redisVoidProxy,
         clientData,
@@ -60,8 +60,8 @@
       };
 
       clientData = {
-        chat_room: faker.internet.password(),
-        client_id: faker.random.number()
+        documentId: faker.internet.password(),
+        clientId  : faker.random.number()
       };
     });
 
@@ -104,7 +104,7 @@
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
 
         expect(client.subscribe).called;
-        expect(client.subscribe).calledWith(adapter.redis_path);
+        expect(client.subscribe).calledWith(adapter.documentPath);
       });
 
       it('adds client to document active users list', function (done) {
@@ -113,7 +113,7 @@
 
         PromiseSync.doneCallback = function () {
           expect(publisher.sadd).calledOnce;
-          expect(publisher.sadd).calledWithExactly(adapter.redis_user_count_path, adapter.client_data.client_id);
+          expect(publisher.sadd).calledWithExactly(adapter.documentUsersPath, adapter.clientData.clientId);
           done();
         };
 
@@ -128,12 +128,12 @@
         // then
         var msgTemplate = {
           type   : 'join',
-          payload: { client: clientData.client_id }
+          payload: { client: clientData.clientId }
         };
 
         PromiseSync.doneCallback = function () {
           expect(publisher.publish).calledOnce;
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.any);
+          expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
           var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
           expect(args).to.containEql(msgTemplate);
 
@@ -159,9 +159,9 @@
 
         PromiseSync.doneCallback = function () {
           expect(publisher.scard).called;
-          expect(publisher.scard).calledWith(adapter.redis_user_count_path, sinon.match.func);
+          expect(publisher.scard).calledWith(adapter.documentUsersPath, sinon.match.func);
           expect(publisher.publish).calledOnce;
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.any);
+          expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
           var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
           expect(args).to.containEql(msgTemplate);
 
@@ -190,10 +190,10 @@
         var msg = faker.lorem.sentence();
         var msgTemplate = { type: 'msg', payload: msg };
 
-        adapter.publish_operation(msg);
+        adapter.publishOperation(msg);
 
         expect(publisher.publish).called;
-        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.any);
+        expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
         var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
         expect(args).to.containEql(msgTemplate);
       });
@@ -202,10 +202,10 @@
         var msg = faker.lorem.sentence();
         var msgTemplate = { type: 'sel', payload: msg };
 
-        adapter.publish_selection(msg);
+        adapter.publishSelection(msg);
 
         expect(publisher.publish).called;
-        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.any);
+        expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
         var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
         expect(args).to.containEql(msgTemplate);
       });
@@ -272,7 +272,7 @@
         adapter.unsubscribe();
 
         expect(publisher.srem).called;
-        expect(publisher.srem).calledWith(adapter.redis_user_count_path, adapter.client_data.client_id);
+        expect(publisher.srem).calledWith(adapter.documentUsersPath, adapter.clientData.clientId);
       });
 
       it('broadcasts event \'user disconnected\' containing user count', function (done) {
@@ -288,13 +288,13 @@
         var msgTemplate = {
           type   : 'left',
           payload: {
-            client    : clientData.client_id,
+            client    : clientData.clientId,
             user_count: publisher.scard()
           }
         };
         PromiseSync.doneCallback = function () {
           expect(publisher.publish).called;
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.any);
+          expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
           var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
           expect(args).to.containEql(msgTemplate);
           done();

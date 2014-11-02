@@ -26,9 +26,9 @@ module.exports = function (app) {
 
 function onNewConnection(app, socket) {
   // read client data
-  var client_data = {
-    client_id: Date.now() % 1000,   // TODO read from socket handshake
-    chat_room: 'aaa'                // TODO read from socket handshake
+  var clientData = {
+    clientId: Date.now() % 1000,   // TODO read from socket handshake
+    documentId: 'aaa'                // TODO read from socket handshake
   };
 
   // server to client sending channel
@@ -40,8 +40,8 @@ function onNewConnection(app, socket) {
   };
 
   // create logic module
-  client_data.msgPipeline = new MsgPipeline(app, client_data, emitterCallbacks);
-  var pipe = client_data.msgPipeline;
+  clientData.msgPipeline = new MsgPipeline(app, clientData, emitterCallbacks);
+  var pipe = clientData.msgPipeline;
 
   // socket callbacks - whatever happened forward it to pipeline ( logic module)
   socket.on('disconnect', pipe.onDisconnected.bind(pipe, app));

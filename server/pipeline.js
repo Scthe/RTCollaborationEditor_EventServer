@@ -11,14 +11,14 @@ var RedisAdapter = require('./redis_adapter');
  *
  * There is quite a lot of logic in here !
  */
-function Pipeline(app, client_data, emitterCallbacks) {
+function Pipeline(app, clientData, emitterCallbacks) {
   // TODO check if client has r/w rights, return undefined if not
 
-  this.client_data = client_data;
-  this.redis_adapter = new RedisAdapter(client_data, emitterCallbacks);
+  this.clientData = clientData;
+  this.redisAdapter = new RedisAdapter(clientData, emitterCallbacks);
 
   // node-level message
-  app.emit('new user', client_data);
+  app.emit('new user', clientData);
 }
 
 Pipeline.prototype = {
@@ -32,10 +32,10 @@ module.exports = Pipeline;
 
 function onDisconnected(app) {
   /* jshint -W040 */ // binded to Pipeline prototype object
-  this.redis_adapter.unsubscribe();
+  this.redisAdapter.unsubscribe();
 
   // node-level message
-  app.emit('remove user', this.client_data);
+  app.emit('remove user', this.clientData);
 }
 
 function onOperationMessage(data) {
@@ -45,14 +45,14 @@ function onOperationMessage(data) {
   // TODO enrich
 
   // publish
-  data.username = this.client_data.client_id;
-  this.redis_adapter.publish_operation(data);
+  data.username = this.clientData.clientId;
+  this.redisAdapter.publishOperation(data);
 
   // TODO might as well use node event system to propagate the message to db store
 }
 function onSelectionMessage(data) {
   /* jshint -W040 */ // binded to Pipeline prototype object
-  data.username = this.client_data.client_id;
-  this.redis_adapter.publish_selection(data);
+  data.username = this.clientData.clientId;
+  this.redisAdapter.publishSelection(data);
 }
 

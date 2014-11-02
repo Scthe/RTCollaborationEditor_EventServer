@@ -28,8 +28,8 @@
 
     beforeEach(function () {
       clientData = {
-        chat_room: faker.internet.password(),
-        client_id: faker.random.number()
+        documentId: faker.internet.password(),
+        clientId  : faker.random.number()
       };
     });
 
@@ -108,14 +108,14 @@
 
         var redisAdapter = RedisAdapterProxy.prototype.lastInstance;
         expect(redisAdapter).to.exist;
-        expect(redisAdapter.publish_operation).calledOnce;
-        expect(redisAdapter.publish_operation).calledWithExactly(msgTmpl);
+        expect(redisAdapter.publishOperation).calledOnce;
+        expect(redisAdapter.publishOperation).calledWithExactly(msgTmpl);
       });
 
       it('adds to the message creator\'s id', function () {
         var pipeline = new Pipeline(app, clientData);
         var usernamePattern = {
-          username: clientData.client_id,
+          username: clientData.clientId,
           data    : sinon.match.object
         };
 
@@ -123,8 +123,8 @@
 
         var redisAdapter = RedisAdapterProxy.prototype.lastInstance;
         expect(redisAdapter).to.exist;
-        expect(redisAdapter.publish_operation).calledOnce;
-        expect(redisAdapter.publish_operation).calledWithExactly(usernamePattern);
+        expect(redisAdapter.publishOperation).calledOnce;
+        expect(redisAdapter.publishOperation).calledWithExactly(usernamePattern);
       });
     });
 
@@ -146,14 +146,14 @@
 
         var redisAdapter = RedisAdapterProxy.prototype.lastInstance;
         expect(redisAdapter).to.exist;
-        expect(redisAdapter.publish_selection).calledOnce;
-        expect(redisAdapter.publish_selection).calledWithExactly(msgTmpl);
+        expect(redisAdapter.publishSelection).calledOnce;
+        expect(redisAdapter.publishSelection).calledWithExactly(msgTmpl);
       });
 
       it('adds to the message creator\'s id', function () {
         var pipeline = new Pipeline(app, clientData);
         var usernamePattern = {
-          username: clientData.client_id,
+          username: clientData.clientId,
           data    : sinon.match.object
         };
 
@@ -161,8 +161,8 @@
 
         var redisAdapter = RedisAdapterProxy.prototype.lastInstance;
         expect(redisAdapter).to.exist;
-        expect(redisAdapter.publish_selection).calledOnce;
-        expect(redisAdapter.publish_selection).calledWithExactly(usernamePattern);
+        expect(redisAdapter.publishSelection).calledOnce;
+        expect(redisAdapter.publishSelection).calledWithExactly(usernamePattern);
       });
     });
 
@@ -173,8 +173,8 @@
     this.constructor.apply(this, arguments);
 
     this.unsubscribe = sinon.spy();
-    this.publish_operation = sinon.spy();
-    this.publish_selection = sinon.spy();
+    this.publishOperation = sinon.spy();
+    this.publishSelection = sinon.spy();
 
     RedisAdapterProxy.prototype.lastInstance = this;
   }

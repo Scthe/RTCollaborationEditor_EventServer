@@ -170,13 +170,13 @@
 
   });
 
-  function PipelineProxy(app, client_data, emitterCallbacks) {
+  function PipelineProxy(app, clientData, emitterCallbacks) {
     /* jshint unused:false */
     this.constructor = sinon.spy();
     this.constructor.apply(this, arguments);
 
 //    this.app = app;
-    this.client_data = client_data;
+    this.clientData = clientData;
     this.emitterCallbacks = emitterCallbacks;
 
 
