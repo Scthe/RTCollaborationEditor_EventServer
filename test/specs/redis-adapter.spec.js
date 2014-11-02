@@ -1,6 +1,6 @@
 /*jslint indent: 2 */
 /*jshint expr: true*/
-/* global describe, it, beforeEach, expect, require, sinon, voidFunction, faker, PromiseSync */
+/* global describe, it, beforeEach, before, expect, require, sinon, voidFunction, faker, chai, PromiseSync */
 
 (function () {
   'use strict';
@@ -8,16 +8,44 @@
   var proxyquire = require('proxyquire').noCallThru(),
       _ = require('underscore');
 
-  describe('RedisAdapter', function () {
+  describe.only('RedisAdapter', function () {
 
-//    var redisVoidProxy;
-//    var redisLibraryCreateClient,
-//        clientData,
-//        redisAdapterModuleOverrides,
-//        adapter;
     var redisVoidProxy,
         clientData,
         adapter;
+
+    before(function () {
+      // little chai plugin to be able to use:
+      // var args = expect(publisher.publish).secondArgument.to.be.JSON_ObjectsList();
+      // expect(args).to.containEql(msgTemplate);
+      //
+      // ( writing sinon matcher would be easier but not nearly as fun)
+
+      chai.use(function (_chai) {
+        var Assertion = _chai.Assertion;
+
+        Assertion.addProperty('secondArguments', function () {
+          this._obj = _.map(this._obj.args, function (e) {
+            return e[1];
+          });
+          return this;
+        });
+
+        Assertion.addChainableMethod('JSON_ObjectsList', function () {
+          // we cannot just use 'return JSON.parse(this._obj);'
+          // because array converted implicitly to string is not parseable  :(
+          return  _.map(this._obj.args, function (e) {
+            return JSON.parse(e);
+          });
+        });
+
+        Assertion.addChainableMethod('containEql', function (tmpl) {
+          return _.any(this._obj, function (e) {
+            return _.isEqual(e, tmpl);
+          });
+        });
+      });
+    });
 
     beforeEach(function () {
       redisVoidProxy = {
@@ -93,56 +121,60 @@
       });
 
       it('broadcasts event \'new user\'', function (done) {
+        // given
         var publisher = {publish: sinon.spy()};
         var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
 
+        // then
+        var msgTemplate = {
+          type   : 'join',
+          payload: { client: clientData.client_id }
+        };
+
         PromiseSync.doneCallback = function () {
-          expect(publisher.publish).called;
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-          // second arg should be stringified JSON
-          publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
-          var msgTemplate = {
-            type   : 'join',
-            payload: {
-              client: sinon.match.number
-            }
-          };
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
+          expect(publisher.publish).calledOnce;
+          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.any);
+          var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+          expect(args).to.containEql(msgTemplate);
+
           done();
         };
 
+        // when
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
-      it('publishes correct user count', function (done) {
+      it('publishes user count', function (done) {
+        // given
         var publisher = {
           publish: sinon.spy(),
           scard  : sinon.stub().returns(faker.random.number())
         };
         var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
 
+        // then
+        var msgTemplate = {
+          payload: { user_count: publisher.scard() }
+        };
+
         PromiseSync.doneCallback = function () {
           expect(publisher.scard).called;
           expect(publisher.scard).calledWith(adapter.redis_user_count_path, sinon.match.func);
-          expect(publisher.publish).called;
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-          // second arg should be stringified JSON
-          publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
-          var msgTemplate = {
-            payload: {
-              user_count: publisher.scard()
-            }
-          };
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
+          expect(publisher.publish).calledOnce;
+          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.any);
+          var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+          expect(args).to.containEql(msgTemplate);
+
           done();
         };
 
+        // when
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
     });
 
-    describe('publish', function () {
+    describe('publishes', function () {
 
       var publisher,
           adapter;
@@ -156,40 +188,35 @@
 
       it('operation', function () {
         var msg = faker.lorem.sentence();
+        var msgTemplate = { type: 'msg', payload: msg };
+
         adapter.publish_operation(msg);
 
         expect(publisher.publish).called;
-        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-        // second arg should be stringified JSON
-        for (var i = 0; i < publisher.publish.args.length; i++) {
-          publisher.publish.args[i][1] = JSON.parse(publisher.publish.args[i][1]);
-        }
-
-        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match({ type: 'msg', payload: msg }));
+        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.any);
+        var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+        expect(args).to.containEql(msgTemplate);
       });
 
       it('selection', function () {
         var msg = faker.lorem.sentence();
+        var msgTemplate = { type: 'sel', payload: msg };
+
         adapter.publish_selection(msg);
 
         expect(publisher.publish).called;
-        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-        // second arg should be stringified JSON
-        for (var i = 0; i < publisher.publish.args.length; i++) {
-          publisher.publish.args[i][1] = JSON.parse(publisher.publish.args[i][1]);
-        }
-
-        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match({ type: 'sel', payload: msg }));
+        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.any);
+        var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+        expect(args).to.containEql(msgTemplate);
       });
 
     });
 
-    describe('calls callbacks', function () {
+    describe('calls callbacks in case of', function () {
 
       var publisher,
           adapter,
-          messageCallbacks,
-          message;
+          messageCallbacks;
 
       beforeEach(function () {
         publisher = {publish: sinon.spy()};
@@ -205,50 +232,32 @@
         adapter = new RedisAdapter(clientData, messageCallbacks);
       });
 
-      it('operation', function () {
-        adapter._messageHandler(undefined, createMessage('msg'));
-        expect(messageCallbacks.operation).called;
-        expect(messageCallbacks.operation).calledWith(message.payload);
-      });
+      var tests = [
+        ['operation', 'msg', 'operation'],
+        ['selection', 'sel', 'selection'],
+        ['user join', 'join', 'join'],
+        ['user left', 'left', 'disconnect']
+      ];
 
-      it('selection', function () {
-        adapter._messageHandler(undefined, createMessage('sel'));
-        expect(messageCallbacks.selection).called;
-        expect(messageCallbacks.selection).calledWith(message.payload);
-      });
+      for (var i = 0; i < tests.length; i++) {
+        var testName = tests[i][0],
+            type = tests[i][1],
+            method = tests[i][2];
 
-      it('user join', function () {
-        message = {
-          type   : 'join',
+        it(testName, testCase.bind(undefined, type, method));
+      }
+
+      function testCase(type, method) {
+        var message = {
+          type   : type,
           payload: {
             client    : faker.random.number(),
             user_count: faker.random.number()
           }
         };
         adapter._messageHandler(undefined, JSON.stringify(message));
-        expect(messageCallbacks.join).called;
-        expect(messageCallbacks.join).calledWith(message.payload);
-      });
-
-      it('user left', function () {
-        message = {
-          type   : 'left',
-          payload: {
-            client    : faker.random.number(),
-            user_count: faker.random.number()
-          }
-        };
-        adapter._messageHandler(undefined, JSON.stringify(message));
-        expect(messageCallbacks.disconnect).called;
-        expect(messageCallbacks.disconnect).calledWith(message.payload);
-      });
-
-      function createMessage(type_) {
-        message = {
-          type   : type_,
-          payload: faker.random.number()
-        };
-        return JSON.stringify(message);
+        expect(messageCallbacks[method]).called;
+        expect(messageCallbacks[method]).calledWith(message.payload);
       }
 
     });
@@ -266,7 +275,8 @@
         expect(publisher.srem).calledWith(adapter.redis_user_count_path, adapter.client_data.client_id);
       });
 
-      it('publishes correct user count', function (done) { // TODO same as #create.publishes-correct-user-count
+      it('broadcasts event \'user disconnected\' containing user count', function (done) {
+        // given
         var publisher = {
           publish: sinon.spy(),
           scard  : sinon.stub().returns(faker.random.number())
@@ -274,49 +284,23 @@
         var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
 
-        PromiseSync.doneCallback = function () {
-          expect(publisher.scard).called;
-          expect(publisher.scard).calledWith(adapter.redis_user_count_path, sinon.match.func);
-          expect(publisher.publish).called;
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-          // second arg should be stringified JSON
-          publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
-          var msgTemplate = {
-            payload: {
-              user_count: publisher.scard()
-            }
-          };
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
-          done();
+        // then
+        var msgTemplate = {
+          type   : 'left',
+          payload: {
+            client    : clientData.client_id,
+            user_count: publisher.scard()
+          }
         };
-        adapter.unsubscribe();
-      });
-
-      it('broadcasts event \'user #{client_id} disconnected\'', function (done) {
-        var fakeUserCount = faker.random.number();
-        var publisher = {
-          publish: sinon.spy(),
-          scard  : sinon.stub().returns(fakeUserCount)
-        };
-        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
-        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
-
-
         PromiseSync.doneCallback = function () {
           expect(publisher.publish).called;
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-          // second arg should be stringified JSON
-          publisher.publish.args[1][1] = JSON.parse(publisher.publish.args[1][1]);
-          var msgTemplate = {
-            type   : 'left',
-            payload: {
-              client    : clientData.client_id,
-              user_count: fakeUserCount
-            }
-          };
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
+          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.any);
+          var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+          expect(args).to.containEql(msgTemplate);
           done();
         };
+
+        // when
         adapter.unsubscribe();
       });
 
