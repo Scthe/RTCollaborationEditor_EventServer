@@ -1,6 +1,6 @@
 /*jslint indent: 2 */
 /*jshint expr: true*/
-/* global describe, it, beforeEach, expect, require, sinon, voidFunction, faker, PromiseSync */
+/* global describe, it, beforeEach, before, expect, require, sinon, voidFunction, faker, chai, PromiseSync */
 
 (function () {
   'use strict';
@@ -10,11 +10,42 @@
 
   describe('RedisAdapter', function () {
 
-    var redisVoidProxy;
-    var redisLibraryCreateClient,
+    var redisVoidProxy,
         clientData,
-        redisAdapterModuleOverrides,
         adapter;
+
+    before(function () {
+      // little chai plugin to be able to use:
+      // var args = expect(publisher.publish).secondArgument.to.be.JSON_ObjectsList();
+      // expect(args).to.containEql(msgTemplate);
+      //
+      // ( writing sinon matcher would be easier but not nearly as fun)
+
+      chai.use(function (_chai) {
+        var Assertion = _chai.Assertion;
+
+        Assertion.addProperty('secondArguments', function () {
+          this._obj = _.map(this._obj.args, function (e) {
+            return e[1];
+          });
+          return this;
+        });
+
+        Assertion.addChainableMethod('JSON_ObjectsList', function () {
+          // we cannot just use 'return JSON.parse(this._obj);'
+          // because array converted implicitly to string is not parseable  :(
+          return  _.map(this._obj.args, function (e) {
+            return JSON.parse(e);
+          });
+        });
+
+        Assertion.addChainableMethod('containEql', function (tmpl) {
+          return _.any(this._obj, function (e) {
+            return _.isEqual(e, tmpl);
+          });
+        });
+      });
+    });
 
     beforeEach(function () {
       redisVoidProxy = {
@@ -28,20 +59,9 @@
         quit     : voidFunction
       };
 
-      redisLibraryCreateClient = sinon.stub();
-      redisLibraryCreateClient.onFirstCall().returns(redisVoidProxy);
-      redisLibraryCreateClient.onSecondCall().returns(redisVoidProxy);
-      redisLibraryCreateClient.onThirdCall().returns(redisVoidProxy);
-      var redisLibraryStub = {createClient: redisLibraryCreateClient};
-
       clientData = {
-        chat_room: faker.internet.password(),
-        client_id: faker.random.number()
-      };
-
-      redisAdapterModuleOverrides = {
-        'redis': redisLibraryStub,
-        'q'    : PromiseSync
+        documentId: faker.internet.password(),
+        clientId  : faker.random.number()
       };
     });
 
@@ -53,13 +73,8 @@
       var publisherSpy = {
         on: sinon.spy()
       };
-      var redisLibraryCreateClient = sinon.stub();
-      redisLibraryCreateClient.onFirstCall().returns(publisherSpy);
-      redisLibraryCreateClient.onSecondCall().returns(redisVoidProxy);
-      var redisLibraryStub = {createClient: redisLibraryCreateClient};
 
-      proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
-
+      requireRedisAdapter(publisherSpy);
       expect(publisherSpy.on).to.be.calledOnce;
     });
 
@@ -68,13 +83,8 @@
         on     : sinon.spy(),
         monitor: sinon.spy()
       };
-      var redisLibraryCreateClient = sinon.stub();
-      redisLibraryCreateClient.onFirstCall().returns(redisVoidProxy);
-      redisLibraryCreateClient.onSecondCall().returns(monitorSpy);
-      var redisLibraryStub = {createClient: redisLibraryCreateClient};
 
-      proxyquire('../../server/redis_adapter', { 'redis': redisLibraryStub });
-
+      requireRedisAdapter(undefined, monitorSpy);
       expect(monitorSpy.on).to.be.calledTwice;
       expect(monitorSpy.monitor).to.be.calledOnce;
     });
@@ -82,203 +92,172 @@
     describe('#create', function () {
 
       it('returns valid object', function () {
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
-
+        var RedisAdapter = requireRedisAdapter();
         var obj = new RedisAdapter(clientData, voidFunction, voidFunction);
         expect(obj).to.exist;
       });
 
       it('subscribes client to redis queue', function () {
-        var client = _.clone(redisVoidProxy);
-        client.subscribe = sinon.spy();
-        redisLibraryCreateClient.onThirdCall().returns(client);
+        var client = {subscribe: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(undefined, undefined, client);
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
 
         expect(client.subscribe).called;
-        expect(client.subscribe).calledWith(adapter.redis_path);
+        expect(client.subscribe).calledWith(adapter.documentPath);
       });
 
       it('adds client to document active users list', function (done) {
-        var publisher = _.clone(redisVoidProxy);
-        publisher.sadd = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
+        var publisher = {sadd: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
 
         PromiseSync.doneCallback = function () {
           expect(publisher.sadd).calledOnce;
-          expect(publisher.sadd).calledWithExactly(adapter.redis_user_count_path, adapter.client_data.client_id);
+          expect(publisher.sadd).calledWithExactly(adapter.documentUsersPath, adapter.clientData.clientId);
           done();
         };
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
       it('broadcasts event \'new user\'', function (done) {
-        var publisher = _.clone(redisVoidProxy);
-        publisher.publish = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
+        // given
+        var publisher = {publish: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
+
+        // then
+        var msgTemplate = {
+          type   : 'join',
+          payload: { client: clientData.clientId }
+        };
 
         PromiseSync.doneCallback = function () {
-          expect(publisher.publish).called;
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-          // second arg should be stringified JSON
-          publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
-          var msgTemplate = {
-            type   : 'join',
-            payload: {
-              client: sinon.match.number
-            }
-          };
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
+          expect(publisher.publish).calledOnce;
+          expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
+          var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+          expect(args).to.containEql(msgTemplate);
+
           done();
         };
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+        // when
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
-      it('publishes correct user count', function (done) {
-        var publisher = _.clone(redisVoidProxy);
-        publisher.scard = sinon.stub().returns(faker.random.number());
-        publisher.publish = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
+      it('publishes user count', function (done) {
+        // given
+        var publisher = {
+          publish: sinon.spy(),
+          scard  : sinon.stub().returns(faker.random.number())
+        };
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
+
+        // then
+        var msgTemplate = {
+          payload: { user_count: publisher.scard() }
+        };
 
         PromiseSync.doneCallback = function () {
           expect(publisher.scard).called;
-          expect(publisher.scard).calledWith(adapter.redis_user_count_path, sinon.match.func);
-          expect(publisher.publish).called;
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-          // second arg should be stringified JSON
-          publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
-          var msgTemplate = {
-            payload: {
-              user_count: publisher.scard()
-            }
-          };
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
+          expect(publisher.scard).calledWith(adapter.documentUsersPath, sinon.match.func);
+          expect(publisher.publish).calledOnce;
+          expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
+          var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+          expect(args).to.containEql(msgTemplate);
+
           done();
         };
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+        // when
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
       });
 
     });
 
-    describe('publish', function () {
+    describe('publishes', function () {
 
       var publisher,
           adapter;
 
       beforeEach(function () {
-        publisher = _.clone(redisVoidProxy);
-        publisher.publish = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
+        publisher = {publish: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction, voidFunction, voidFunction);
       });
 
       it('operation', function () {
         var msg = faker.lorem.sentence();
-        adapter.publish_operation(msg);
+        var msgTemplate = { type: 'msg', payload: msg };
+
+        adapter.publishOperation(msg);
 
         expect(publisher.publish).called;
-        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-        // second arg should be stringified JSON
-        for (var i = 0; i < publisher.publish.args.length; i++) {
-          publisher.publish.args[i][1] = JSON.parse(publisher.publish.args[i][1]);
-        }
-
-        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match({ type: 'msg', payload: msg }));
+        expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
+        var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+        expect(args).to.containEql(msgTemplate);
       });
 
       it('selection', function () {
         var msg = faker.lorem.sentence();
-        adapter.publish_selection(msg);
+        var msgTemplate = { type: 'sel', payload: msg };
+
+        adapter.publishSelection(msg);
 
         expect(publisher.publish).called;
-        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-        // second arg should be stringified JSON
-        for (var i = 0; i < publisher.publish.args.length; i++) {
-          publisher.publish.args[i][1] = JSON.parse(publisher.publish.args[i][1]);
-        }
-
-        expect(publisher.publish).calledWith(adapter.redis_path, sinon.match({ type: 'sel', payload: msg }));
+        expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
+        var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+        expect(args).to.containEql(msgTemplate);
       });
 
     });
 
-    describe('calls callbacks', function () {
+    describe('calls callbacks in case of', function () {
 
       var publisher,
           adapter,
-          operation_callback,
-          selection_callback,
-          join_callback,
-          disconnect_callback,
-          message;
+          messageCallbacks;
 
       beforeEach(function () {
-        publisher = _.clone(redisVoidProxy);
-        publisher.publish = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
+        publisher = {publish: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
 
-        operation_callback = sinon.spy();
-        selection_callback = sinon.spy();
-        join_callback = sinon.spy();
-        disconnect_callback = sinon.spy();
+        messageCallbacks = {
+          operation : sinon.spy(),
+          selection : sinon.spy(),
+          join      : sinon.spy(),
+          disconnect: sinon.spy()
+        };
 
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
-        adapter = new RedisAdapter(clientData, operation_callback, selection_callback, join_callback, disconnect_callback);
+        adapter = new RedisAdapter(clientData, messageCallbacks);
       });
 
-      it('operation', function () {
-        adapter._messageHandler(undefined, createMessage('msg'));
-        expect(operation_callback).called;
-        expect(operation_callback).calledWith(message.payload);
-      });
+      var tests = [
+        ['operation', 'msg', 'operation'],
+        ['selection', 'sel', 'selection'],
+        ['user join', 'join', 'join'],
+        ['user left', 'left', 'disconnect']
+      ];
 
-      it('selection', function () {
-        adapter._messageHandler(undefined, createMessage('sel'));
-        expect(selection_callback).called;
-        expect(selection_callback).calledWith(message.payload);
-      });
+      for (var i = 0; i < tests.length; i++) {
+        var testName = tests[i][0],
+            type = tests[i][1],
+            method = tests[i][2];
 
-      it('user join', function () {
-        message = {
-          type   : 'join',
+        it(testName, testCase.bind(undefined, type, method));
+      }
+
+      function testCase(type, method) {
+        var message = {
+          type   : type,
           payload: {
             client    : faker.random.number(),
             user_count: faker.random.number()
           }
         };
         adapter._messageHandler(undefined, JSON.stringify(message));
-        expect(join_callback).called;
-        expect(join_callback).calledWith(message.payload);
-      });
-
-      it('user left', function () {
-        message = {
-          type   : 'left',
-          payload: {
-            client    : faker.random.number(),
-            user_count: faker.random.number()
-          }
-        };
-        adapter._messageHandler(undefined, JSON.stringify(message));
-        expect(disconnect_callback).called;
-        expect(disconnect_callback).calledWith(message.payload);
-      });
-
-      function createMessage(type_) {
-        message = {
-          type   : type_,
-          payload: faker.random.number()
-        };
-        return JSON.stringify(message);
+        expect(messageCallbacks[method]).called;
+        expect(messageCallbacks[method]).calledWith(message.payload);
       }
 
     });
@@ -286,75 +265,79 @@
     describe('#unsubscribe', function () {
 
       it('removes client from document\'s active users list', function () {
-        var publisher = _.clone(redisVoidProxy);
-        publisher.srem = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
-
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+        var publisher = {srem: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
 
         adapter.unsubscribe();
 
         expect(publisher.srem).called;
-        expect(publisher.srem).calledWith(adapter.redis_user_count_path, adapter.client_data.client_id);
+        expect(publisher.srem).calledWith(adapter.documentUsersPath, adapter.clientData.clientId);
       });
 
-      it('publishes correct user count', function (done) { // TODO same as #create.publishes-correct-user-count
-        var publisher = _.clone(redisVoidProxy);
-        publisher.scard = sinon.stub().returns(faker.random.number());
-        publisher.publish = sinon.spy();
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
-
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+      it('broadcasts event \'user disconnected\' containing user count', function (done) {
+        // given
+        var publisher = {
+          publish: sinon.spy(),
+          scard  : sinon.stub().returns(faker.random.number())
+        };
+        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
 
-        PromiseSync.doneCallback = function () {
-          expect(publisher.scard).called;
-          expect(publisher.scard).calledWith(adapter.redis_user_count_path, sinon.match.func);
-          expect(publisher.publish).called;
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-          // second arg should be stringified JSON
-          publisher.publish.args[0][1] = JSON.parse(publisher.publish.args[0][1]);
-          var msgTemplate = {
-            payload: {
-              user_count: publisher.scard()
-            }
-          };
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
-          done();
+        // then
+        var msgTemplate = {
+          type   : 'left',
+          payload: {
+            client    : clientData.clientId,
+            user_count: publisher.scard()
+          }
         };
-        adapter.unsubscribe();
-      });
-
-      it('broadcasts event \'user #{client_id} disconnected\'', function (done) {
-        var publisher = _.clone(redisVoidProxy);
-        publisher.publish = sinon.spy();
-        var fakeUserCount = faker.random.number();
-        publisher.scard = sinon.stub().returns(fakeUserCount);
-        redisLibraryCreateClient.onFirstCall().returns(publisher);
-
-        var RedisAdapter = proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
-        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
-
         PromiseSync.doneCallback = function () {
           expect(publisher.publish).called;
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match.string);
-          // second arg should be stringified JSON
-          publisher.publish.args[1][1] = JSON.parse(publisher.publish.args[1][1]);
-          var msgTemplate = {
-            type   : 'left',
-            payload: {
-              client    : clientData.client_id,
-              user_count: fakeUserCount
-            }
-          };
-          expect(publisher.publish).calledWith(adapter.redis_path, sinon.match(msgTemplate));
+          expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
+          var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+          expect(args).to.containEql(msgTemplate);
           done();
         };
+
+        // when
         adapter.unsubscribe();
       });
 
     });
+
+
+    /**
+     *
+     * @param redisProxy1 publisher object
+     * @param redisProxy2 monitor object
+     * @param redisProxy3
+     * @returns {*} module with stubbed all superfluous dependencies
+     */
+    function requireRedisAdapter(redisProxy1, redisProxy2, redisProxy3) {
+      var r1 = createRedisClientInstance(redisProxy1),
+          r2 = createRedisClientInstance(redisProxy2),
+          r3 = createRedisClientInstance(redisProxy3);
+
+      var redisLibraryCreateClient = sinon.stub();
+      redisLibraryCreateClient.onFirstCall().returns(r1);
+      redisLibraryCreateClient.onSecondCall().returns(r2);
+      redisLibraryCreateClient.onThirdCall().returns(r3);
+      var redisLibrary = {createClient: redisLibraryCreateClient};
+
+      var redisAdapterModuleOverrides = {
+        'redis': redisLibrary,
+        'q'    : PromiseSync
+      };
+
+      return proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+
+      function createRedisClientInstance(overrides) {
+        var overrides_ = overrides ? overrides : {};
+        var o = _.clone(redisVoidProxy);
+        return _.extend(o, overrides_);
+      }
+    }
 
   });
 

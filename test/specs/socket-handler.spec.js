@@ -12,34 +12,45 @@
 
   GLOBAL.config = {socket_port: SOCKET_PORT};
 
+  var pipelineForwardedCalls;
 
   describe('SocketHandler', function () {
 
-    var server,
-        app,            // server state
-        socket;
+    var server, // normal host&port server as underlying for socket connection receiver
+        app,// node application state f.e some messages are published on this object
+        socket;// client socket
 
     beforeEach(function () {
       // constructor like function
       var socketHandlerModuleOverrides = {
-        './redis_adapter': RedisAdapterProxy
+        './pipeline': PipelineProxy
       };
       var registerSocketHandler = proxyquire('../../server/socket_handler', socketHandlerModuleOverrides);
 
-      // start socket server
+      // create app object
       app = function () {
       };
       app.emit = sinon.spy();
+
+      // start socket server
       server = registerSocketHandler(app, SOCKET_PORT);
 
+      // client socket
       socket = io.connect('http://' + SOCKET_HOST + ':' + SOCKET_PORT, { forceNew: true });
+    });
+
+    beforeEach(function () {
+      pipelineForwardedCalls = {
+        _onDisconnected    : sinon.spy(),
+        _onOperationMessage: sinon.spy(),
+        _onSelectionMessage: sinon.spy()
+      };
     });
 
     afterEach(function () {
       if (server) {
         server.close();
       }
-      RedisAdapterProxy.prototype.lastInstance = undefined;
     });
 
     it('connects', function (done) {
@@ -50,111 +61,23 @@
 
     describe('#connected', function () {
 
-      it('creates RedisAdapter', function (done) {
-        socket.on('connect', function () {
-          expect(RedisAdapterProxy.prototype.lastInstance).to.exist;
-          var redisAdapter = RedisAdapterProxy.prototype.lastInstance;
-          expect(redisAdapter.constructor).calledOnce;
-          expect(redisAdapter.constructor).calledWithExactly(
-            sinon.match.object,
-            sinon.match.func,
-            sinon.match.func,
-            sinon.match.func,
-            sinon.match.func);
-          done();
-        });
+      it_('creates pipeline for message processing', function (done) {
+        expect(PipelineProxy.prototype.lastInstance).to.exist;
+        var pipeline = PipelineProxy.prototype.lastInstance;
+        expect(pipeline.constructor).calledOnce;
+        expect(pipeline.constructor).calledWithExactly(
+          app,
+          sinon.match.object,
+          sinon.match.object);
+
+        done();
       });
 
-      it('propagates to node message bus', function (done) {
-        socket.on('connect', function () {
-          expect(app.emit).calledOnce;
-          var msgTemplate = {
-            chat_room    : sinon.match.string,
-            client_id    : sinon.match.number,
-            redis_adapter: RedisAdapterProxy.prototype.lastInstance
-          };
-          expect(app.emit).calledWithExactly('new user', sinon.match(msgTemplate));
-          done();
-        });
-      });
+      // TODO add tests for reading proper client data
 
     });
 
-    /*
-     // TODO check why this test conflicts with the connects test
-     describe('#disconnected', function () {
-
-     it('propagates to redis', function (done) {
-     socket.on('connect', function () {
-     RedisAdapterProxy.prototype.lastInstance.unsubscribe = onRedisUnsubscribe;
-     socket.disconnect();
-     });
-
-     function onRedisUnsubscribe() {
-     done();
-     }
-     });
-
-     it('propagates to node message bus', function (done) {
-     socket.on('connect', function () {
-     app.emit = function (path, data) {
-     if (path === 'remove user') {
-     expect(data.chat_room).to.be.a('string');
-     expect(data.client_id).to.be.a('number');
-     expect(data.redis_adapter).to.be.eq(RedisAdapterProxy.prototype.lastInstance);
-     done();
-     }
-     };
-     socket.disconnect();
-     });
-     });
-
-     });
-     */
-
-    describe('propagates to redis', function () {
-
-      it('operations', function (done) {
-        socket.on('connect', function () {
-          var msgTmpl = {
-            data: {
-              a: faker.random.number()
-            }
-          };
-
-          RedisAdapterProxy.prototype.lastInstance.publish_operation = function (msg) {
-            expect(msg).to.have.keys(['data', 'username']);
-            expect(msg.data).to.deep.equal(msgTmpl.data);
-            expect(msg.username).to.be.a('number');
-            done();
-          };
-
-          socket.emit('operation', msgTmpl);
-        });
-      });
-
-      it('selections', function (done) {
-        socket.on('connect', function () {
-          var msgTmpl = {
-            data: {
-              a: faker.random.number()
-            }
-          };
-
-          RedisAdapterProxy.prototype.lastInstance.publish_selection = function (msg) {
-            expect(msg).to.have.keys(['data', 'username']);
-            expect(msg.data).to.deep.equal(msgTmpl.data);
-            expect(msg.username).to.be.a('number');
-            done();
-          };
-
-          socket.emit('selection', msgTmpl);
-        });
-      });
-
-    });
-
-    describe('propagates to socket', function () {
+    describe('CLIENT -> server:', function () {
 
       var msgTmpl;
 
@@ -166,67 +89,116 @@
         };
       });
 
-      it('#emit_operation', function (done) {
-        socket.on('connect', function () {
-          RedisAdapterProxy.prototype.lastInstance.messageHandler(msgTmpl);
-          socket.on('operation', function (data) {
-            expect(data).to.deep.equal(msgTmpl);
-            done();
-          });
-        });
+      it_('#emit_operation', function (done) {
+        pipelineForwardedCalls._onOperationMessage = function (data) {
+          expect(data).to.deep.equal(msgTmpl);
+          done();
+        };
+        socket.emit('operation', msgTmpl);
       });
 
-      it('#emit_selection', function (done) {
-        socket.on('connect', function () {
-//          RedisAdapterProxy.prototype.lastInstance.userStatusChangeHandler(msgTmpl);
-          socket.on('selection', function (data) {
-            expect(data).to.deep.equal(msgTmpl);
-            done();
-          });
-        });
+      it_('#emit_selection', function (done) {
+        pipelineForwardedCalls._onSelectionMessage = function (data) {
+          expect(data).to.deep.equal(msgTmpl);
+          done();
+        };
+        socket.emit('selection', msgTmpl);
       });
 
-      it('#emit_client_reconnected', function (done) {
-        socket.on('connect', function () {
-//          RedisAdapterProxy.prototype.lastInstance.userStatusChangeHandler(msgTmpl);
-          socket.on('reconnect', function (data) {
-            expect(data).to.deep.equal(msgTmpl);
-            done();
-          });
-        });
+      /* TODO #disconnect test
+       it('#disconnect', function (done) {
+       socket.on('connect', function () {
+       pipelineForwardedCalls._onDisconnected = function (data) {
+       done();
+       };
+
+       socket.disconnect();
+       });
+       });
+       */
+    });
+
+    describe('SERVER -> client:', function () {
+
+      var msgTmpl;
+
+      beforeEach(function () {
+        msgTmpl = {
+          data: {
+            a: faker.random.number()
+          }
+        };
       });
 
-      it('#emit_client_left', function (done) {
-        socket.on('connect', function () {
-//          RedisAdapterProxy.prototype.lastInstance.userStatusChangeHandler(msgTmpl);
-          socket.on('client_left', function (data) {
-            expect(data).to.deep.equal(msgTmpl);
-            done();
-          });
+      var tests = [
+        ['#emit_operation', 'operation', 'operation'],
+        ['#emit_selection', 'selection', 'selection'],
+        ['#emit_reconnect', 'reconnect', 'join'],
+        ['#emit_client_left', 'client_left', 'disconnect']
+      ];
+
+      // create the test for us since they are in 90% the same
+      for (var i = 0; i < tests.length; i++) {
+        var testName = tests[i][0],
+            testChannel = tests[i][1],
+            senderMethod = tests[i][2];
+
+        it_(testName, testCase.bind(undefined, testChannel, senderMethod));
+      }
+
+      function testCase(testChannel, senderMethod, done) {
+        // send through provided callback interface
+        var sender = PipelineProxy.prototype.lastInstance.emitterCallbacks;
+        sender[senderMethod](msgTmpl);
+
+        // expect to receive
+        socket.on(testChannel, function (data) {
+          expect(data).to.deep.equal(msgTmpl);
+          done();
         });
-      });
+      }
 
     });
 
+    function it_(name, f) {
+      it(name, function (done) {
+        socket.on('connect', function () {
+          f(done);
+        });
+      });
+    }
+
   });
 
-  function RedisAdapterProxy(clientData, f1, f2, f3, f4) {
-    /* jshint unused:false */ // clientData is not used
+  function PipelineProxy(app, clientData, emitterCallbacks) {
+    /* jshint unused:false */
     this.constructor = sinon.spy();
     this.constructor.apply(this, arguments);
-    RedisAdapterProxy.prototype.lastInstance = this;
 
-//    this.messageHandler = f1;
-//    this.f2 = f2;
-//    this.f3 = f3;
-//    this.userStatusChangeHandler = f4;
+//    this.app = app;
+    this.clientData = clientData;
+    this.emitterCallbacks = emitterCallbacks;
+
+
+    PipelineProxy.prototype.lastInstance = this;
   }
 
-  RedisAdapterProxy.prototype = {
-    unsubscribe      : sinon.spy(),
-    publish_operation: sinon.spy(),
-    publish_selection: sinon.spy(),
-    lastInstance     : undefined
+  PipelineProxy.prototype = {
+    // ( functions below are binded in constructor which limits their testability
+    // (binding process creates separate object to which we do not have access).
+    // by forwarding calls to different object we can overcome this limitation )
+
+    onDisconnected    : function () {
+      pipelineForwardedCalls._onDisconnected.apply(this, arguments);
+    },
+    onOperationMessage: function () {
+      pipelineForwardedCalls._onOperationMessage.apply(this, arguments);
+    },
+    onSelectionMessage: function () {
+      pipelineForwardedCalls._onSelectionMessage.apply(this, arguments);
+    },
+
+    lastInstance: undefined // in tests we need reference to Pipeline object !
   };
 
 })();
