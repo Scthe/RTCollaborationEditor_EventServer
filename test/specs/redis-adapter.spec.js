@@ -97,6 +97,33 @@
         expect(obj).to.exist;
       });
 
+      it('sets correct document path', function () {
+        var client = {subscribe: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(undefined, undefined, client);
+
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
+        expect(adapter.documentPath).to.contain(clientData.documentId);
+      });
+
+      it('sets correct document users path', function () {
+        var client = {subscribe: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(undefined, undefined, client);
+
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
+        expect(adapter.documentUsersPath).to.contain(clientData.documentId);
+      });
+
+      it('holds client data for further use', function () {
+        var client = {subscribe: sinon.spy()};
+        var RedisAdapter = requireRedisAdapter(undefined, undefined, client);
+
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
+        expect(adapter.clientData).to.be.equal(clientData);
+      });
+      
       it('subscribes client to redis queue', function () {
         var client = {subscribe: sinon.spy()};
         var RedisAdapter = requireRedisAdapter(undefined, undefined, client);

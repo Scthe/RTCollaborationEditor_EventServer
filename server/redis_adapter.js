@@ -6,8 +6,8 @@ var redis = require('redis'),
     util = require('util'),
     Q = require('q');
 
-var documentPathPattern = 'document/%d',
-    documentUsersPath = 'document/%d/user_list';
+var documentPathPattern = 'document/%s',
+    documentUsersPathPattern = 'document/%s/user_list';
 
 // separate publisher needed since can't publish in subscribe mode
 var redisPublisher = defaultRedisClient('PUBLISHER');
@@ -31,8 +31,8 @@ var redisPublisher = defaultRedisClient('PUBLISHER');
 function RedisAdapter(clientData, msgCallbacks) {
   var that = this;
   this.clientData = clientData;
-  this.documentPath = util.format(documentPathPattern, clientData.docunentId);
-  this.documentUsersPath = util.format(documentUsersPath, clientData.docunentId);
+  this.documentPath = util.format(documentPathPattern, clientData.documentId);
+  this.documentUsersPath = util.format(documentUsersPathPattern, clientData.documentId);
   this._messageHandler = _.partial(_messageHandlerProto, msgCallbacks);
   this.client = defaultRedisClient();
 
