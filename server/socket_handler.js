@@ -3,6 +3,7 @@
 
 var http = require('http'),
     socketIO = require('socket.io'),
+    socketioJwt = require('socketio-jwt'),
     _ = require('underscore'),
     MsgPipeline = require('./pipeline');
 
@@ -17,6 +18,11 @@ module.exports = function (app) {
     io = socketIO.listen(server);
   }
 
+  io.set('authorization', socketioJwt.authorize({
+    secret: config.secret_key,
+    handshake: true
+  }));
+
   // create handler for socket connections
   io.sockets.on('connection', _.partial(onNewConnection, app));
 
@@ -25,6 +31,8 @@ module.exports = function (app) {
 };
 
 function onNewConnection(app, socket) {
+  console.log(socket.client.request.decoded_token, 'connected');
+
   // read client data
   var clientData = {
     clientId: Date.now() % 1000,   // TODO read from socket handshake
