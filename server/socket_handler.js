@@ -19,7 +19,7 @@ module.exports = function (app) {
   }
 
   io.set('authorization', socketioJwt.authorize({
-    secret: config.secret_key,
+    secret   : config.secret_key,
     handshake: true
   }));
 
@@ -31,13 +31,16 @@ module.exports = function (app) {
 };
 
 function onNewConnection(app, socket) {
-  console.log(socket.client.request.decoded_token, 'connected');
+  var data = socket.client.request.decoded_token;
+//  console.log(data, 'connected');
+  // TODO on incorrect token
 
   // read client data
   var clientData = {
-    clientId: Date.now() % 1000,   // TODO read from socket handshake
-    documentId: 'aaa'                // TODO read from socket handshake
+    clientId  : data.client_id,
+    documentId: data.document_id
   };
+//  console.log(clientData, 'connected');
 
   // server to client sending channel
   var emitterCallbacks = {

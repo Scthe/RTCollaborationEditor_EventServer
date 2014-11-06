@@ -8,9 +8,9 @@ module.exports = function (app) {
 };
 
 function onNewUser(data) {
-  console.info(util.format('[system event] new user: %d', data.client_id));
+  console.info(util.format('[system event] new user: %s', data.clientId));
 }
 
 function onRemoveUser(data) {
-  console.info(util.format('[system event] remove user: %d', data.client_id));
+  console.info(util.format('[system event] remove user: %s', data.clientId));
 }
