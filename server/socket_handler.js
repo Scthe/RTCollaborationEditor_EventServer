@@ -32,8 +32,8 @@ module.exports = function (app) {
 
 function onNewConnection(app, socket) {
   var data = socket.client.request.decoded_token;
-//  console.log(data, 'connected');
-  // TODO on incorrect token
+  // NOTE: if the provided auth token is not ok
+  // the execution does not reach this point
 
   // read client data
   var clientData = {
