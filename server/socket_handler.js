@@ -37,8 +37,8 @@ function onNewConnection(app, socket) {
 
   // read client data
   var clientData = {
-    clientId  : data.client_id,
-    documentId: data.document_id
+    clientId  : data.clientId,
+    documentId: data.documentId
   };
 //  console.log(clientData, 'connected');
 
@@ -51,8 +51,7 @@ function onNewConnection(app, socket) {
   };
 
   // create logic module
-  clientData.msgPipeline = new MsgPipeline(app, clientData, emitterCallbacks);
-  var pipe = clientData.msgPipeline;
+  var pipe = new MsgPipeline(app, clientData, emitterCallbacks);
 
   // socket callbacks - whatever happened forward it to pipeline ( logic module)
   socket.on('disconnect', pipe.onDisconnected.bind(pipe, app));

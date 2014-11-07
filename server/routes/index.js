@@ -10,8 +10,8 @@ var express = require('express'),
 router.get('/:id', function (req, res) {
   /* jshint unused:false */ // req is not used
   var data = {
-    document_id: req.params.id,
-    client_id : Date.now() % 1000 // this can be read from cookie
+    documentId: req.params.id,
+    clientId : Date.now() % 1000 // this can be read from cookie
   };
 
   var token = jwt.sign(data, config.secret_key, { expiresInMinutes: 60 * 5 });
