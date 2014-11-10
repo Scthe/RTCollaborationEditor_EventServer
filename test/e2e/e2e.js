@@ -15,7 +15,7 @@
  * 1:disconnect
  * expect user_count ==0
 
- modify docs:
+ [DONE] modify docs:
  * join1
  * 1:write
  * expect changes visible
@@ -37,14 +37,6 @@
  * 1:write
  * expect NO changes
 
-
-
-
- casper.evaluate(function(username, password) {
- document.querySelector('#username').value = username;
- document.querySelector('#password').value = password;
- document.querySelector('#submit').click();
- }, 'sheldon.cooper', 'b4z1ng4');
  */
 
 (function () {
@@ -59,7 +51,13 @@
     });
   });
 
-  it('e2e test 1', function () {
+  it('Base event propagation test', function () {
+
+    var line = 1,
+        ch = 3,
+        chEnd = 3,
+        testText = 'Test', // TODO find a way to require a faker
+        expectedText = 'var' + testText + ' bindings = {';
 
     casper.start(url);
 
@@ -67,26 +65,20 @@
       expect('sublime-docs').to.matchTitle;
 
       // move selector
-      this.evaluate(function () {
+      this.evaluate(function (line, ch, chEnd) {
         /*global editor, CodeMirror*/
-        var line = 1,
-            ch = 3,
-            chEnd = 3;
-//            chEnd = 12;
+
         var anchor = new CodeMirror.Pos(line, ch),
             head = new CodeMirror.Pos(line, chEnd),
             options = {origin: '*mouse'};
         editor.setSelection(anchor, head, options);
-      });
-
-      casper.capture('../selection.png');
-
+      }, line, ch, chEnd);
     });
 
     // write
     casper.then(function () {
       // TODO input should be focused ! ( line: 2424, fast bail condition)
-      this.sendKeys('#texteditor-input', 'Test');
+      this.sendKeys('#texteditor-input', testText);
     });
 
     // wait for event propagation
@@ -94,10 +86,11 @@
 
     // check event result
     casper.then(function () {
-      var line = this.evaluate(function () {
-        return editor.doc.getLine(1);
-      });
-      expect(line).to.equal('varTest bindings = {');
+      var lineText = this.evaluate(function (line) {
+        return editor.doc.getLine(line);
+      }, line);
+
+      expect(lineText).to.equal(expectedText);
     });
 
   });
@@ -118,6 +111,9 @@
    * var userCount = this.evaluate(function () {
    * return $('#user_count').text();
    * });
+   *
+   * CAPTURE
+   * casper.capture('../selection.png');
    *
    */
 
