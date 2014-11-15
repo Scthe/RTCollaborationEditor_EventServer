@@ -62,7 +62,9 @@ function buildSnapshot(lastestChangeIdToConsider, callback) {
     .then(_getChangesSinceSnapshot)
     .then(_applyChanges)
     .then(function (data) {
-      console.log('--->' + data);
+      console.log('---');
+      console.log(data);
+      console.log('---');
     })
     .catch(console.printStackTrace)
     .done(function () {
@@ -100,14 +102,6 @@ function applyChanges(data) {
     };
   });
 
-//  phantomAdapter.replayEvents(this.snapshot, this.events, function (html) {
-//    console.log('--->' + html);
-//    console.info('done2');
-//  });
-
-
-//  var nextStep = phantomAdapter.replayEvents.bind(undefined, this.snapshot, this.events),
-//      f = Q.denodeify(nextStep);
-//  return f();
+  // phantomAdapter.replayEvents returns promise !
   return phantomAdapter.replayEvents(this.snapshot, this.events);
 }

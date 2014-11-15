@@ -21,7 +21,7 @@ var phridge = require('phridge'),
 
 phridge.spawn(phantomCmdArgs)
   .then(function (_phantom) {
-    console.debug('PhantomJS instance created');
+    console.log('PhantomJS instance created');
     phantom = _phantom;
     tryExecute();
   });
@@ -50,9 +50,16 @@ function tryExecute(f) {
 }
 
 //region replayEvents
-function replayEvents(lastSnapshot, events, callback) {
+
+/**
+ *
+ * @param lastSnapshot snapshot to build upon
+ * @param events list of events to apply
+ * @returns {Promise.promise|*} this will be deferred when phantom finishes creating snapshot
+ */
+function replayEvents(lastSnapshot, events) {
   var deferred = Q.defer(),
-      f = __replayEvents.bind(undefined, deferred, lastSnapshot, events, callback);
+      f = __replayEvents.bind(undefined, deferred, lastSnapshot, events);
   tryExecute(f);
   return deferred.promise;
 }
@@ -66,7 +73,7 @@ function replayEvents(lastSnapshot, events, callback) {
 function __replayEvents(deferred, lastSnapshot, events) {
   console.debug('executing PHANTOM job');
   // exec. context: node
-//  var deferred = Q.defer();
+
   phantom.run(baseUrl, lastSnapshot, events, function (url, lastSnapshot, events, resolve) {
     // exec. context: PhantomJS
     /*global webpage*/
@@ -78,6 +85,7 @@ function __replayEvents(deferred, lastSnapshot, events) {
       addPageHandlers(page);
 
       var html = page.evaluate(function (startDoc, events) {
+        // TODO if this blocks ( and it does) then there is a little problem of synch. call in the middle of server execution
         // exec. context: browser
         /*global editor, remoteInterface*/
         // TODO contains codemirror specific code
@@ -118,25 +126,9 @@ function __replayEvents(deferred, lastSnapshot, events) {
     });
     // END exec. context: PhantomJS
     // exec. context: node
-  }).then(function (text) {
-//    console.log(text);
-//    console.log('phantom End: ' + (error ? 'NOT OK' : 'OK'));
-//    if (error) {
-//      deferred.reject(new Error(error));
-//    } else {
-    deferred.resolve(text);
-//    }
-  })
+  }).then(deferred.resolve)
     .catch(console.printStackTrace)
     .done(tryExecute);// execute next call
-
-  /*
-   .then(callback) // TODO refactor to call callback in case of error too
-   .catch(console.printStackTrace)
-   .done(tryExecute);// execute next call
-   */
-//  return promise;
-//  return deferred.promise;
 }
 //endregion
 
