@@ -50,7 +50,7 @@ $(document).ready(function () {
   remoteInterface = {
     send_operation: send_operation,
     send_selection: send_selection,
-    on_operation  : voidFunction,
+    on_operation  : voidFunction, // TODO this stops all changes to document !
     on_selection  : voidFunction,
     on_reconnect  : voidFunction,
     on_client_left: voidFunction

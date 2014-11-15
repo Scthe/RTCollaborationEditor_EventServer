@@ -10,12 +10,8 @@ html
     script
       | function voidFunction(){}
       | window.remoteInterface = {
-      |   send_operation: voidFunction,
+      |   send_operation: function(changeObj){editor.makeRemoteChange(changeObj); },
       |   send_selection: voidFunction,
-      |   on_operation  : voidFunction,
-      |   on_selection  : voidFunction,
-      |   on_reconnect  : voidFunction,
-      |   on_client_left: voidFunction
       | };
     script(src='https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js')
     script(src='https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.7.0/underscore-min.js')

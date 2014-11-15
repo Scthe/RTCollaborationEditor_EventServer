@@ -55,7 +55,6 @@ function replayEvents(lastSnapshot, events, callback) {
 
 /**
  *
- * @param documentId document id as seen in f.e. url
  * @param lastSnapshot text to set text editor's value to
  * @param events list of events since last snapshot
  * @param callback what to do on success, only arg. should be resulting HTML
@@ -77,11 +76,17 @@ function __replayEvents(lastSnapshot, events, callback) {
         // exec. context: browser
         /*global editor, remoteInterface*/
         // TODO contains codemirror specific code
+
+        // set start value
         editor.setValue(startDoc);
+
+        // execute events
         for (var i = 0; i < events.length; i++) {
           remoteInterface.on_operation(events[i]);
         }
+
         return editor.getValue();
+
         // END exec. context: browser
       }, lastSnapshot, events);
 
