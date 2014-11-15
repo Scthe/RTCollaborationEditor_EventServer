@@ -1,6 +1,7 @@
 'use strict';
 
-var RedisAdapter = require('./redis_adapter');
+var RedisAdapter = require('./redis_adapter'),
+    SnapshotFactory = require('./storage/snapshot_factory');
 
 /**
  * Ok, so You've like got a message, right ? The from-client type of message.
@@ -19,6 +20,10 @@ function Pipeline(app, clientData, emitterCallbacks) {
 
   // node-level message
   app.emit('new user', clientData);
+
+  var a = new SnapshotFactory(clientData);
+  a.buildSnapshot(51, function () {
+  });
 }
 
 Pipeline.prototype = {

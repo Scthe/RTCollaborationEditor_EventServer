@@ -12,7 +12,7 @@ $(document).ready(function () {
   value += '\n';
   value += '// The implementation of joinLines\n';
 
-  editor = CodeMirror(document.getElementById('editor'), {
+  editor = CodeMirror(document.getElementById('editorHook'), {
     value                  : value,
     lineNumbers            : true,
     autoCloseBrackets      : true,
