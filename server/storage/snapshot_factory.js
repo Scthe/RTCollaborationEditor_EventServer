@@ -15,7 +15,8 @@
  * - play events that happened from snapshot creation to now
  */
 
-var phantomAdapter = require('./phantom_adapter');
+var phantomAdapter = require('./phantom_adapter'),
+    Q = require('q');
 
 function SnapshotFactory(clientData) {
 }
@@ -47,25 +48,15 @@ function buildSnapshot(lastestChangeIdToConsider, callback) {
 
   console.log('buildSnapshot');
 
-  setTimeout(function () {
-    // sometimes we have to wait till phantom instance is created
-    var lastestSnapshot = getLastestSnapshot(),
-        events = getChangesSinceSnapshot(50, lastestChangeIdToConsider);
-    phantomAdapter.replayEvents(lastestSnapshot.data, events, function (html) {
-      console.log('--->' + html);
-    });
-  }, 400);
+  var lastestSnapshot = getLastestSnapshot(),
+      events = getChangesSinceSnapshot(50, lastestChangeIdToConsider);
+  phantomAdapter.replayEvents(lastestSnapshot.data, events, function (html) {
+    console.log('--->' + html);
+  });
 }
 
 
 function getLastestSnapshot() {
-  // TODO change to HTML in the final version
-//  var value = '// The bindings defined specifically in the Sublime Text mode\n';
-//  value += 'var bindings = {\n';
-//  value += '}\n';
-//  value += '\n';
-//  value += '// The implementation of joinLines\n';
-
   var value = 'aaaa\nbbbb\ncccc\ndddd';
 
   return {
