@@ -29,4 +29,7 @@ module.exports = function () {
   console.printStackTrace = function (err) {
     console.error(err.stack);
   };
+  console.db = function (e) {
+    cl(chalk.yellow(e));
+  };
 };

@@ -50,15 +50,60 @@ function buildSnapshot(lastestChangeIdToConsider, callback) {
 
   console.log('buildSnapshot');
 
-  var getLastestSnapshot = Q.denodeify(databaseAdapter.getLastestSnapshot.bind(undefined, 'docA'));
+  var docId = 'docA',
+      lastestChangeIdToConsider = 2;
+  var sideResults = {
+    snapshot: {},
+    events  : []
+  };
+
+  var getLastestSnapshot = Q.denodeify(databaseAdapter.getLastestSnapshot.bind(undefined, docId));
   getLastestSnapshot()
-    .then(function (e, d) {
-      console.log('then');
-      console.log(e);
-      console.log(d);
+    .then(function (data, err) { // TODO why this args have their order swapped ?!
+      if (data.length !== 1) {
+        throw new Error('There should be 1 snapshot');
+      }
+      if (err) {
+        throw err;
+      }
+
+      data = data[0];
+//        console.log(data);
+      sideResults.snapshot = data;
+      var baseChangeId = data.changeId,
+          getEvents = Q.denodeify(databaseAdapter.getEvents.bind(undefined, docId, baseChangeId, lastestChangeIdToConsider));
+      return getEvents();
     })
+    .then(function (data, err) { // TODO why this args have their order swapped ?!
+      sideResults.events = data.map(function (e) {
+        var json = e.data.replace(/'/g, '"');
+        return {
+          changeId: e.changeId,
+          username: e.clientId,
+          data    : JSON.parse(json)
+        };
+
+      });
+
+      console.log(sideResults);
+
+      var s = sideResults.snapshot.data;
+      s = s.replace(/\\n/g, '\n');
+      var evs = sideResults.events;
+
+      phantomAdapter.replayEvents(s, evs, function (html) {
+        console.log('--->' + html);
+        console.info('done2');
+      });
+//      var f = Q.denodeify(phantomAdapter.replayEvents.bind(undefined, s, evs));
+//      return f();
+    })
+    .then(function (data) {
+//      console.log('--->' + data);
+    })
+    .catch(console.printStackTrace)
     .done(function () {
-      console.log('done');
+      console.info('done');
     });
 
   /*
@@ -71,7 +116,7 @@ function buildSnapshot(lastestChangeIdToConsider, callback) {
 }
 
 
-function getLastestSnapshot() {
+function getLastestSnapshot_() {
   var value = 'aaaa\nbbbb\ncccc\ndddd';
 
   return {

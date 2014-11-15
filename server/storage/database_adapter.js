@@ -41,7 +41,7 @@ function getLastestSnapshot(documentId, callback) {
   var query = 'SELECT * FROM `snapshots.%s` ORDER BY `changeId` DESC LIMIT 1';
   // exec
   query = util.format(query, documentId);
-//  console.debug(query);
+  console.db(query);
   db.all(query, {}, callback);
 }
 
@@ -54,7 +54,7 @@ function getEvents(documentId, changeIdFrom, changeIdTo, callback) {
   };
   // exec
   query = util.format(query, documentId);
-//  console.debug(query);
+  console.db(query);
   db.all(query, params, callback);
 }
 
@@ -68,9 +68,6 @@ function tmpDbAll() {
       args = arguments;
 
   this.jobQueue.push(function (db) {
-//    console.log('call from job queue');
-//    console.log(args);
-//    console.log(args[1]);
     db.all.apply(db, args);
   });
   return deferred.promise; // TODO this does not seem to be ok
