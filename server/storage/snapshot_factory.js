@@ -55,37 +55,14 @@ function buildSnapshot(lastestChangeIdToConsider, callback) {
 
   var firstStep = databaseAdapter.getLastestSnapshot.bind(this, this.docId),
       getLastestSnapshot = Q.denodeify(firstStep),
-      _getChangesSinceSnapshot = getChangesSinceSnapshot.bind(this);
+      _getChangesSinceSnapshot = getChangesSinceSnapshot.bind(this),
+      _applyChanges = applyChanges.bind(this);
 
   getLastestSnapshot()
     .then(_getChangesSinceSnapshot)
-    .then(function (data, err) { // TODO why this args have their order swapped ?!
-      console.log(data);
-      sideResults.events = data.map(function (e) {
-        var json = e.data.replace(/'/g, '"');
-        return {
-          changeId: e.changeId,
-          username: e.clientId,
-          data    : JSON.parse(json)
-        };
-
-      });
-
-      console.log(sideResults);
-
-      var s = sideResults.snapshot.data;
-      s = s.replace(/\\n/g, '\n');
-      var evs = sideResults.events;
-
-      phantomAdapter.replayEvents(s, evs, function (html) {
-        console.log('--->' + html);
-        console.info('done2');
-      });
-//      var f = Q.denodeify(phantomAdapter.replayEvents.bind(undefined, s, evs));
-//      return f();
-    })
+    .then(_applyChanges)
     .then(function (data) {
-//      console.log('--->' + data);
+      console.log('--->' + data);
     })
     .catch(console.printStackTrace)
     .done(function () {
@@ -110,3 +87,28 @@ function getChangesSinceSnapshot(data) { // TODO why this args have their order 
   return getEvents();
 }
 
+function applyChanges(data) { // TODO why this args have their order swapped ?!
+  /* jshint -W040 */
+
+  // read events
+  this.events = data.map(function (e) {
+    var json = e.data.replace(/'/g, '"');
+    return {
+      changeId: e.changeId,
+      username: e.clientId,
+      data    : JSON.parse(json)
+    };
+  });
+
+  // invoke phantom
+  var s = this.snapshot.data;
+  s = s.replace(/\\n/g, '\n'); // TODO codemirror specific code
+  var evs = this.events;
+
+  phantomAdapter.replayEvents(s, evs, function (html) {
+    console.log('--->' + html);
+    console.info('done2');
+  });
+//      var f = Q.denodeify(phantomAdapter.replayEvents.bind(undefined, s, evs));
+//      return f();
+}
