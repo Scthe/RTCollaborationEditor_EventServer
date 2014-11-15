@@ -70,15 +70,15 @@ function buildSnapshot(lastestChangeIdToConsider, callback) {
     });
 }
 
-function getChangesSinceSnapshot(data) { // TODO why this args have their order swapped ?!
+function getChangesSinceSnapshot(data) {
   /* jshint -W040 */
   if (data.length !== 1) {
     throw new Error('There should be 1 snapshot');
   }
 
   // read snapshot
-  this.snapshot = data[0];
-//        console.log(this.snapshot);
+  this.snapshot = data[0].data.replace(/\\n/g, '\n'); // TODO codemirror specific code;
+//  console.log(this.snapshot);
 
   // prepare for reading of changes from db
   var baseChangeId = data[0].changeId,
@@ -87,7 +87,7 @@ function getChangesSinceSnapshot(data) { // TODO why this args have their order 
   return getEvents();
 }
 
-function applyChanges(data) { // TODO why this args have their order swapped ?!
+function applyChanges(data) {
   /* jshint -W040 */
 
   // read events
@@ -100,15 +100,14 @@ function applyChanges(data) { // TODO why this args have their order swapped ?!
     };
   });
 
-  // invoke phantom
-  var s = this.snapshot.data;
-  s = s.replace(/\\n/g, '\n'); // TODO codemirror specific code
-  var evs = this.events;
+//  phantomAdapter.replayEvents(this.snapshot, this.events, function (html) {
+//    console.log('--->' + html);
+//    console.info('done2');
+//  });
 
-  phantomAdapter.replayEvents(s, evs, function (html) {
-    console.log('--->' + html);
-    console.info('done2');
-  });
-//      var f = Q.denodeify(phantomAdapter.replayEvents.bind(undefined, s, evs));
-//      return f();
+
+//  var nextStep = phantomAdapter.replayEvents.bind(undefined, this.snapshot, this.events),
+//      f = Q.denodeify(nextStep);
+//  return f();
+  return phantomAdapter.replayEvents(this.snapshot, this.events);
 }

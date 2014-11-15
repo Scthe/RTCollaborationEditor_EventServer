@@ -16,7 +16,8 @@ var phridge = require('phridge'),
     baseUrl = util.format('http://localhost:%d/new', config.app_port), // url to new document
     phantomCmdArgs = {},
     phantom,
-    jobQueue = [];
+    jobQueue = [],
+    Q = require('q');
 
 phridge.spawn(phantomCmdArgs)
   .then(function (_phantom) {
@@ -50,18 +51,22 @@ function tryExecute(f) {
 
 //region replayEvents
 function replayEvents(lastSnapshot, events, callback) {
-  tryExecute(__replayEvents.bind(undefined, lastSnapshot, events, callback));
+  var deferred = Q.defer(),
+      f = __replayEvents.bind(undefined, deferred, lastSnapshot, events, callback);
+  tryExecute(f);
+  return deferred.promise;
 }
 
 /**
  *
+ * @param deferred
  * @param lastSnapshot text to set text editor's value to
  * @param events list of events since last snapshot
- * @param callback what to do on success, only arg. should be resulting HTML
  */
-function __replayEvents(lastSnapshot, events, callback) {
+function __replayEvents(deferred, lastSnapshot, events) {
   console.debug('executing PHANTOM job');
   // exec. context: node
+//  var deferred = Q.defer();
   phantom.run(baseUrl, lastSnapshot, events, function (url, lastSnapshot, events, resolve) {
     // exec. context: PhantomJS
     /*global webpage*/
@@ -113,9 +118,25 @@ function __replayEvents(lastSnapshot, events, callback) {
     });
     // END exec. context: PhantomJS
     // exec. context: node
-  }).then(callback)
+  }).then(function (text) {
+//    console.log(text);
+//    console.log('phantom End: ' + (error ? 'NOT OK' : 'OK'));
+//    if (error) {
+//      deferred.reject(new Error(error));
+//    } else {
+    deferred.resolve(text);
+//    }
+  })
     .catch(console.printStackTrace)
     .done(tryExecute);// execute next call
+
+  /*
+   .then(callback) // TODO refactor to call callback in case of error too
+   .catch(console.printStackTrace)
+   .done(tryExecute);// execute next call
+   */
+//  return promise;
+//  return deferred.promise;
 }
 //endregion
 
