@@ -50,31 +50,17 @@ function buildSnapshot(lastestChangeIdToConsider, callback) {
 
   console.log('buildSnapshot');
 
-  var docId = 'docA',
-      lastestChangeIdToConsider = 2;
-  var sideResults = {
-    snapshot: {},
-    events  : []
-  };
+  this.lastestChangeIdToConsider = lastestChangeIdToConsider;
+  this.docId = 'docA';
 
-  var getLastestSnapshot = Q.denodeify(databaseAdapter.getLastestSnapshot.bind(undefined, docId));
+  var firstStep = databaseAdapter.getLastestSnapshot.bind(this, this.docId),
+      getLastestSnapshot = Q.denodeify(firstStep),
+      _getChangesSinceSnapshot = getChangesSinceSnapshot.bind(this);
+
   getLastestSnapshot()
+    .then(_getChangesSinceSnapshot)
     .then(function (data, err) { // TODO why this args have their order swapped ?!
-      if (data.length !== 1) {
-        throw new Error('There should be 1 snapshot');
-      }
-      if (err) {
-        throw err;
-      }
-
-      data = data[0];
-//        console.log(data);
-      sideResults.snapshot = data;
-      var baseChangeId = data.changeId,
-          getEvents = Q.denodeify(databaseAdapter.getEvents.bind(undefined, docId, baseChangeId, lastestChangeIdToConsider));
-      return getEvents();
-    })
-    .then(function (data, err) { // TODO why this args have their order swapped ?!
+      console.log(data);
       sideResults.events = data.map(function (e) {
         var json = e.data.replace(/'/g, '"');
         return {
@@ -105,43 +91,22 @@ function buildSnapshot(lastestChangeIdToConsider, callback) {
     .done(function () {
       console.info('done');
     });
-
-  /*
-   var lastestSnapshot = getLastestSnapshot(),
-   events = getChangesSinceSnapshot(50, lastestChangeIdToConsider);
-   phantomAdapter.replayEvents(lastestSnapshot.data, events, function (html) {
-   console.log('--->' + html);
-   });
-   */
 }
 
+function getChangesSinceSnapshot(data) { // TODO why this args have their order swapped ?!
+  /* jshint -W040 */
+  if (data.length !== 1) {
+    throw new Error('There should be 1 snapshot');
+  }
 
-function getLastestSnapshot_() {
-  var value = 'aaaa\nbbbb\ncccc\ndddd';
+  // read snapshot
+  this.snapshot = data[0];
+//        console.log(this.snapshot);
 
-  return {
-    changeId: 51,
-    data    : value
-  };
+  // prepare for reading of changes from db
+  var baseChangeId = data[0].changeId,
+      nextStep = databaseAdapter.getEvents.bind(undefined, this.docId, baseChangeId, this.lastestChangeIdToConsider),
+      getEvents = Q.denodeify(nextStep);
+  return getEvents();
 }
 
-function getChangesSinceSnapshot(changeIdFrom, changeIdTo) {
-  var ch1 = {
-    changeId  : changeIdFrom + 1,
-    'data'    : {
-      'canceled': true,
-      'from'    : {'line': 2, 'ch': 1, 'xRel': 1},
-      'to'      : {'line': 2, 'ch': 1, 'xRel': 1},
-      'text'    : ['a'],
-      'origin'  : '+input',
-      'removed' : ['']
-    },
-    'username': 780
-  };
-
-  return [ch1];
-}
-
-function applyChanges(snapshot, changes) {
-
-}
