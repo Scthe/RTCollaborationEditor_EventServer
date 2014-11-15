@@ -16,9 +16,11 @@
  */
 
 var phantomAdapter = require('./phantom_adapter'),
+    databaseAdapter = require('./database_adapter'),
     Q = require('q');
 
 function SnapshotFactory(clientData) {
+  this.clientData = clientData;
 }
 
 SnapshotFactory.prototype = {
@@ -48,11 +50,24 @@ function buildSnapshot(lastestChangeIdToConsider, callback) {
 
   console.log('buildSnapshot');
 
-  var lastestSnapshot = getLastestSnapshot(),
-      events = getChangesSinceSnapshot(50, lastestChangeIdToConsider);
-  phantomAdapter.replayEvents(lastestSnapshot.data, events, function (html) {
-    console.log('--->' + html);
-  });
+  var getLastestSnapshot = Q.denodeify(databaseAdapter.getLastestSnapshot.bind(undefined, 'docA'));
+  getLastestSnapshot()
+    .then(function (e, d) {
+      console.log('then');
+      console.log(e);
+      console.log(d);
+    })
+    .done(function () {
+      console.log('done');
+    });
+
+  /*
+   var lastestSnapshot = getLastestSnapshot(),
+   events = getChangesSinceSnapshot(50, lastestChangeIdToConsider);
+   phantomAdapter.replayEvents(lastestSnapshot.data, events, function (html) {
+   console.log('--->' + html);
+   });
+   */
 }
 
 

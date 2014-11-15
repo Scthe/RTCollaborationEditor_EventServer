@@ -2,55 +2,47 @@
 /*global console, require*/
 
 var util = require('util'),
+    Q = require('q'),
     sqlite3 = require('sqlite3').verbose(),
-    dbFile = 'db_test.db', // TODO change path
-    db = new sqlite3.Database(dbFile, function (err) {
-      if (err) {
-        console.log('database \'' + dbFile + '\' could not be opened');
-        console.log(err);
-      } else {
-        console.log('database \'' + dbFile + '\' was succesfully opened');
+    dbFile = 'test/db_test.db',
+    _db = new sqlite3.Database(dbFile, onDbOpen);
 
-        getLastestSnapshot('docA', function (err, rows) {
-          if (err) {
-            console.log('get#snapshot error');
-          } else {
-            console.log('get#snapshot ok');
-            console.log(rows);
-            var row = rows[0];
-            // console.log(row.data);
-            var snapshot = row.data,
-                changeId = row.changeId;
+// temporary database object used till the normal database is not operational
+var db = {
+  jobQueue: [],
+  all     : tmpDbAll
+};
 
-            getEvents('docA', changeId, 2, function (err, rows) {
-              if (err) {
-                console.log('get#events error');
-              } else {
-                console.log(rows);
-                console.log('-----');
-                var json = rows[0].data;
-                json = json.replace(/'/g, '"');
-                var ch = JSON.parse(json);
-                console.log(ch.text);
-              }
-            });
-
-          }
-        });
-
-      }
-    });
-
-module.exports = {};
+module.exports = {
+  getLastestSnapshot: getLastestSnapshot,
+  getEvents         : getEvents
+};
 
 // TODO register handler onNodeExit -> db.close()
+
+function onDbOpen(err) {
+  if (err) {
+    console.log('database \'' + dbFile + '\' could not be opened');
+    console.log(err);
+  } else {
+    console.log('database \'' + dbFile + '\' was succesfully opened');
+    // now, as we took hold off regular database execute all
+    // previously scheduled calls
+    var callsToMake = db.jobQueue;
+    db = _db;
+    for (var i = 0; i < callsToMake.length; i++) {
+      callsToMake[i](db);
+    }
+  }
+}
 
 function getLastestSnapshot(documentId, callback) {
   // SELECT * FROM `snapshots.docA` ORDER BY `changeId` DESC LIMIT 1;
   var query = 'SELECT * FROM `snapshots.%s` ORDER BY `changeId` DESC LIMIT 1';
   // exec
   query = util.format(query, documentId);
-  db.all(query, callback);
+//  console.debug(query);
+  db.all(query, {}, callback);
 }
 
 function getEvents(documentId, changeIdFrom, changeIdTo, callback) {
@@ -62,5 +54,24 @@ function getEvents(documentId, changeIdFrom, changeIdTo, callback) {
   };
   // exec
   query = util.format(query, documentId);
+//  console.debug(query);
   db.all(query, params, callback);
+}
+
+/**
+ * Executed before db connection is stabilised
+ * @returns {Promise.promise|*}
+ */
+function tmpDbAll() {
+  /* jshint -W040 */
+  var deferred = Q.defer(),
+      args = arguments;
+
+  this.jobQueue.push(function (db) {
+//    console.log('call from job queue');
+//    console.log(args);
+//    console.log(args[1]);
+    db.all.apply(db, args);
+  });
+  return deferred.promise; // TODO this does not seem to be ok
 }
