@@ -1,6 +1,6 @@
 /*jslint indent: 2 */
 /*jshint expr: true*/
-/* global describe, it, beforeEach, expect, require, sinon, afterEach, faker */
+/* global describe, it, beforeEach, expect, require, sinon, afterEach, faker, PromiseSync */
 
 (function () {
   'use strict';
@@ -15,9 +15,14 @@
 
     beforeEach(function () {
       var moduleOverrides = {
-        './redis_adapter': RedisAdapterProxy
+        './redis_adapter': RedisAdapterProxy,
+        'q'              : PromiseSync
       };
       Pipeline = proxyquire('../../server/pipeline', moduleOverrides);
+    });
+
+    beforeEach(function () {
+      PromiseSync.reset();
     });
 
     beforeEach(function () {
@@ -39,16 +44,48 @@
 
     describe('#create', function () {
 
-      it('creates RedisAdapter', function () {
-        /* jshint -W031 */ // well that's cute
-
+      it('returns valid object', function () {
         var callbacks = {};
-        new Pipeline(app, clientData, callbacks);
+        var p = new Pipeline(app, clientData, callbacks);
 
-        var redisAdapter = RedisAdapterProxy.prototype.lastInstance;
-        expect(redisAdapter).to.exist;
-        expect(redisAdapter.constructor).calledOnce;
-        expect(redisAdapter.constructor).calledWithExactly(clientData, callbacks);
+        expect(p).to.exist;
+        expect(p.clientData).to.exist;
+        expect(p.redisAdapter).to.exist;
+        expect(p.emitterCallbacks).to.exist;
+      });
+
+      it('creates RedisAdapter', function () {
+        var callbacks = {};
+        var p = new Pipeline(app, clientData, callbacks);
+
+        expect(p.redisAdapter).to.exist;
+        expect(p.redisAdapter.constructor).calledOnce;
+        expect(p.redisAdapter.constructor).calledWithExactly(clientData, callbacks);
+      });
+
+      it('stores client data', function () {
+        var p = new Pipeline(app, clientData);
+        expect(p.clientData).to.be.equal(clientData);
+      });
+
+      it('initializes created RedisAdapter', function () {
+        var p = new Pipeline(app, clientData);
+        expect(p.redisAdapter.__init).calledOnce;
+      });
+
+      it('retrieves user list', function () {
+        var p = new Pipeline(app, clientData);
+        expect(p.redisAdapter.__getUsersForDocument).calledOnce;
+      });
+
+      it('publishes user list', function () {
+        var m = {
+          type   : 'join',
+          payload: { client: clientData.clientId, user_count: sinon.match.any }
+        };
+        var p = new Pipeline(app, clientData);
+        expect(p.redisAdapter.__publish).calledOnce;
+        expect(p.redisAdapter.__publish).calledWithExactly(m);
       });
 
       it('propagates to node message bus', function () {
@@ -64,16 +101,36 @@
 
     describe('#onDisconnected', function () {
 
-      it('propagates to redis', function () {
-        var pipeline = new Pipeline(app, clientData);
-        var emitter = {};
-        emitter.emit = sinon.spy();
+      var emitter;
 
-        pipeline.onDisconnected(emitter);
+      beforeEach(function () {
+        emitter = {emit: sinon.spy()};
+      });
 
-        var redisAdapter = RedisAdapterProxy.prototype.lastInstance;
-        expect(redisAdapter).to.exist;
-        expect(redisAdapter.unsubscribe).calledOnce;
+      it('unsubscribes from redis', function () {
+        var p = new Pipeline(app, clientData);
+        p.onDisconnected(emitter);
+        expect(p.redisAdapter.__unsubscribe).calledOnce;
+      });
+
+      it('retrieves user list', function () {
+        var p = new Pipeline(app, clientData);
+        p.redisAdapter.__getUsersForDocument.reset();
+        p.onDisconnected(emitter);
+        expect(p.redisAdapter.__getUsersForDocument).calledOnce;
+      });
+
+      it('publishes user list', function () {
+        var m = {
+          type   : 'left',
+          payload: { client: clientData.clientId, user_count: sinon.match.any }
+        };
+        var p = new Pipeline(app, clientData);
+        p.redisAdapter.__getUsersForDocument.reset();
+
+        p.onDisconnected(emitter);
+
+        expect(p.redisAdapter.__publish).calledWithExactly(m);
       });
 
       it('propagates to node message bus', function () {
@@ -95,92 +152,105 @@
 
       beforeEach(function () {
         msgTmpl = {
-          data: {
+          payload: {
             a: faker.random.number()
-          }
+          },
+          type   : 'msg'
         };
       });
 
       it('propagates to redis', function () {
-        var pipeline = new Pipeline(app, clientData);
+        var p = new Pipeline(app, clientData);
+        p.redisAdapter.__publish.reset();
 
-        pipeline.onOperationMessage(msgTmpl);
+        p.onOperationMessage(msgTmpl.payload);
 
-        var redisAdapter = RedisAdapterProxy.prototype.lastInstance;
-        expect(redisAdapter).to.exist;
-        expect(redisAdapter.publishOperation).calledOnce;
-        expect(redisAdapter.publishOperation).calledWithExactly(msgTmpl);
+        expect(p.redisAdapter.__publish).calledOnce;
+        expect(p.redisAdapter.__publish).calledWithExactly(msgTmpl);
       });
 
       it('adds to the message creator\'s id', function () {
-        var pipeline = new Pipeline(app, clientData);
-        var usernamePattern = {
+        var p = new Pipeline(app, clientData);
+        p.redisAdapter.__publish.reset();
+
+        p.onOperationMessage(msgTmpl.payload);
+        msgTmpl.payload = {
           username: clientData.clientId,
-          data    : sinon.match.object
+          a       : sinon.match.any
         };
-
-        pipeline.onOperationMessage(msgTmpl);
-
-        var redisAdapter = RedisAdapterProxy.prototype.lastInstance;
-        expect(redisAdapter).to.exist;
-        expect(redisAdapter.publishOperation).calledOnce;
-        expect(redisAdapter.publishOperation).calledWithExactly(usernamePattern);
+        expect(p.redisAdapter.__publish).calledOnce;
+        expect(p.redisAdapter.__publish).calledWithExactly(msgTmpl);
       });
+
     });
 
-    describe('#onSelectionMessage', function () {
-      var msgTmpl;
+    describe('#onPropagatedMessage', function () {
+
+      var publisher,
+          pipeline,
+          messageCallbacks,
+          message;
 
       beforeEach(function () {
-        msgTmpl = {
-          data: {
-            a: faker.random.number()
+        publisher = {publish: sinon.spy()};
+        messageCallbacks = {
+          operation : sinon.spy(),
+          join      : sinon.spy(),
+          disconnect: sinon.spy()
+        };
+        message = {
+          payload: {
+            client    : faker.random.number(),
+            user_count: faker.random.number()
           }
         };
+        pipeline = new Pipeline(app, clientData, messageCallbacks);
       });
 
-      it('propagates to redis', function () {
-        var pipeline = new Pipeline(app, clientData);
+      var tests = [
+        ['operation', 'msg', 'operation'],
+        ['user join', 'join', 'join'],
+        ['user left', 'left', 'disconnect']
+      ];
 
-        pipeline.onSelectionMessage(msgTmpl);
+      for (var i = 0; i < tests.length; i++) {
+        var testName = 'type: ' + tests[i][0],
+            type = tests[i][1],
+            method = tests[i][2];
 
-        var redisAdapter = RedisAdapterProxy.prototype.lastInstance;
-        expect(redisAdapter).to.exist;
-        expect(redisAdapter.publishSelection).calledOnce;
-        expect(redisAdapter.publishSelection).calledWithExactly(msgTmpl);
-      });
+        it(testName, testCase.bind(undefined, type, method));
+      }
 
-      it('adds to the message creator\'s id', function () {
-        var pipeline = new Pipeline(app, clientData);
-        var usernamePattern = {
-          username: clientData.clientId,
-          data    : sinon.match.object
-        };
+      function testCase(type, method) {
+        message.type = type;
+        pipeline.onPropagatedMessage(undefined, JSON.stringify(message));
+        expect(messageCallbacks[method]).called;
+        expect(messageCallbacks[method]).calledWith(message.payload);
+      }
 
-        pipeline.onSelectionMessage(msgTmpl);
-
-        var redisAdapter = RedisAdapterProxy.prototype.lastInstance;
-        expect(redisAdapter).to.exist;
-        expect(redisAdapter.publishSelection).calledOnce;
-        expect(redisAdapter.publishSelection).calledWithExactly(usernamePattern);
-      });
     });
 
   });
 
   function RedisAdapterProxy() {
+    var self = this;
     this.constructor = sinon.spy();
-    this.constructor.apply(this, arguments);
+    this.constructor.apply(self, arguments);
 
-    this.unsubscribe = sinon.spy();
-    this.publishOperation = sinon.spy();
-    this.publishSelection = sinon.spy();
+    this.init = wrap('__init');
+    this.publish = wrap('__publish');
+    this.unsubscribe = wrap('__unsubscribe');
+    this.getUsersForDocument = wrap('__getUsersForDocument');
 
-    RedisAdapterProxy.prototype.lastInstance = this;
+    function wrap(name) {
+      self[name] = sinon.spy();
+      return function () {
+        self[name].call(arguments);
+        var args = self[name].args;
+        args[args.length - 1 ] = arguments;
+        return new PromiseSync();
+      };
+    }
   }
-
-  RedisAdapterProxy.prototype = {
-    lastInstance: undefined // in tests we need reference to RedisAdapter object !
-  };
 
 })();

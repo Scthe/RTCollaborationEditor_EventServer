@@ -25,7 +25,7 @@ function Pipeline(app, clientData, emitterCallbacks) {
   // THEN set the message callback AND add client to the document's user list ( sadd := set add)
   // THEN get client count after changes
   // THEN publish 'client connected' event to queue
-  self.redisAdapter.init(clientData.clientId, onPropagatedMessage.bind(self))
+  self.redisAdapter.init(onPropagatedMessage.bind(self))
     .then(getUsersForDocument)
     .then(function (count) {
       var m = {
@@ -71,7 +71,7 @@ function onDisconnected(app) {
     .done();
 
   // node-level message
-  app.emit('remove user', this.clientData);
+  app.emit('remove user', this.clientData); // TODO move to promise chain, include current users list
 }
 
 function onOperationMessage(data) {

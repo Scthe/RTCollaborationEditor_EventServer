@@ -27,7 +27,7 @@ var redisPublisher = redisClientFactory('PUBLISHER');
 
 
 function RedisAdapter(clientData) {
-  this.clientData = clientData;  // TODO remove from here ?
+  this.clientId = clientData.clientId;
   this.documentPath = util.format(documentPathPattern, clientData.documentId);
   this.documentUsersPath = util.format(documentUsersPathPattern, clientData.documentId);
   this.client = redisClientFactory();
@@ -56,7 +56,7 @@ function redisClientFactory() {
   return client;
 }
 
-function subscribe(clientId, messageHandler) {
+function subscribe(messageHandler) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
 
   // there is no a particular need to separate setMessageHandler
@@ -67,10 +67,10 @@ function subscribe(clientId, messageHandler) {
       setMessageHandler = self.client.on.bind(self.client, 'message', messageHandler),
       addToClientList = function () {
         var redisAddClient = Q.nbind(redisPublisher.sadd, redisPublisher);
-        return redisAddClient(self.documentUsersPath, clientId);
+        return redisAddClient(self.documentUsersPath, self.clientId);
       };
 
-  return redisSubscribe(this.documentPath).then(setMessageHandler).then(addToClientList);
+  return redisSubscribe(self.documentPath).then(setMessageHandler).then(addToClientList);
 }
 
 function unsubscribe() {
@@ -80,12 +80,13 @@ function unsubscribe() {
 
   var redisRemoveClient = Q.nbind(redisPublisher.srem, redisPublisher);
 
-  return redisRemoveClient(self.documentUsersPath, self.clientData.clientId);
+  return redisRemoveClient(self.documentUsersPath, self.clientId);
 }
 
 function getUsersForDocument() {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
-  return Q.denodeify(redisPublisher.scard.bind(redisPublisher, this.documentUsersPath))();
+  var f = Q.denodeify(redisPublisher.scard.bind(redisPublisher, this.documentUsersPath));
+  return f();
 }
 
 function publish(msg) {
