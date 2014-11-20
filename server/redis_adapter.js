@@ -58,7 +58,6 @@ function RedisAdapter(clientData, msgCallbacks) {
 RedisAdapter.prototype = {
   unsubscribe     : unsubscribe,
   publishOperation: publishMessage,
-  publishSelection: publishSelection,
   _getUserCount   : function () {
     return Q.denodeify(redisPublisher.scard.bind(redisPublisher, this.documentUsersPath))();
   }
@@ -75,8 +74,6 @@ function _messageHandlerProto(msgCallbacks, ch, msg) {
   // TODO remove msg.type if, make it const time
   if (m.type === 'msg') {
     msgCallbacks.operation(data);
-  } else if (m.type === 'sel') {
-    msgCallbacks.selection(data);
   } else if (m.type === 'join') {
     msgCallbacks.join(data);
   } else { // disconnect
@@ -115,12 +112,6 @@ function unsubscribe() {
 function publishMessage(msg) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var m = {type: 'msg', payload: msg};
-  redisPublisher.publish(this.documentPath, JSON.stringify(m));
-}
-
-function publishSelection(msg) {
-  /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var m = {type: 'sel', payload: msg};
   redisPublisher.publish(this.documentPath, JSON.stringify(m));
 }
 

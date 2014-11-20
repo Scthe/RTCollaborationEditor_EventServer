@@ -45,7 +45,6 @@ function onNewConnection(app, socket) {
   // server to client sending channel
   var emitterCallbacks = {
     operation : socket.emit.bind(socket, 'operation'),
-    selection : socket.emit.bind(socket, 'selection'),
     join      : socket.emit.bind(socket, 'reconnect'),
     disconnect: socket.emit.bind(socket, 'client_left')
   };
@@ -56,5 +55,4 @@ function onNewConnection(app, socket) {
   // socket callbacks - whatever happened forward it to pipeline ( logic module)
   socket.on('disconnect', pipe.onDisconnected.bind(pipe, app));
   socket.on('operation', pipe.onOperationMessage.bind(pipe));
-  socket.on('selection', pipe.onSelectionMessage.bind(pipe));
 }

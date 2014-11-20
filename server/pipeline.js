@@ -23,8 +23,7 @@ function Pipeline(app, clientData, emitterCallbacks) {
 
 Pipeline.prototype = {
   onDisconnected    : onDisconnected,
-  onOperationMessage: onOperationMessage,
-  onSelectionMessage: onSelectionMessage
+  onOperationMessage: onOperationMessage
 };
 
 module.exports = Pipeline;
@@ -49,10 +48,5 @@ function onOperationMessage(data) {
   this.redisAdapter.publishOperation(data);
 
   // TODO might as well use node event system to propagate the message to db store
-}
-function onSelectionMessage(data) {
-  /* jshint -W040 */ // binded to Pipeline prototype object
-  data.username = this.clientData.clientId;
-  this.redisAdapter.publishSelection(data);
 }
 
