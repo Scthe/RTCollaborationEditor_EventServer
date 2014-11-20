@@ -2,7 +2,6 @@
 /*global config*/
 
 var redis = require('redis'),
-    _ = require('underscore'),
     util = require('util'),
     Q = require('q');
 
@@ -43,29 +42,8 @@ RedisAdapter.prototype = {
 
 module.exports = RedisAdapter;
 
-function getUsersForDocument() {
-  /* jshint -W040 */ // binded to RedisAdapter prototype object
-  return Q.denodeify(redisPublisher.scard.bind(redisPublisher, this.documentUsersPath))();
-}
-
-function subscribe(clientId, messageHandler) {
-  /* jshint -W040 */ // binded to RedisAdapter prototype object
-
-  var self = this,
-      redisSubscribe = Q.nbind(this.client.subscribe, this.client),
-      setMessageHandler = function () {
-        // there is no a particular need to separate setMessageHandler
-        // and addToClientList. Although it makes for a nicer sentence
-        // on invocation.
-        self.client.on('message', messageHandler);
-      },
-      addToClientList = function () {
-        var redisAddClient = Q.nbind(redisPublisher.sadd, redisPublisher);
-        return redisAddClient(self.documentUsersPath, clientId);
-      };
-
-  return redisSubscribe(this.documentPath).then(setMessageHandler).then(addToClientList);
-}
+//
+// implementation
 
 function redisClientFactory() {
   var client = redis.createClient(config.redis_port, config.redis_host);
@@ -78,6 +56,23 @@ function redisClientFactory() {
   return client;
 }
 
+function subscribe(clientId, messageHandler) {
+  /* jshint -W040 */ // binded to RedisAdapter prototype object
+
+  // there is no a particular need to separate setMessageHandler
+  // and addToClientList. Although it makes for a nicer sentence
+  // on invocation.
+  var self = this,
+      redisSubscribe = Q.nbind(this.client.subscribe, this.client),
+      setMessageHandler = self.client.on.bind(self.client, 'message', messageHandler),
+      addToClientList = function () {
+        var redisAddClient = Q.nbind(redisPublisher.sadd, redisPublisher);
+        return redisAddClient(self.documentUsersPath, clientId);
+      };
+
+  return redisSubscribe(this.documentPath).then(setMessageHandler).then(addToClientList);
+}
+
 function unsubscribe() {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var self = this;
@@ -88,9 +83,13 @@ function unsubscribe() {
   return redisRemoveClient(self.documentUsersPath, self.clientData.clientId);
 }
 
+function getUsersForDocument() {
+  /* jshint -W040 */ // binded to RedisAdapter prototype object
+  return Q.denodeify(redisPublisher.scard.bind(redisPublisher, this.documentUsersPath))();
+}
+
 function publish(msg) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var redisPublish = Q.nbind(redisPublisher.publish, redisPublisher);
   return redisPublish(this.documentPath, JSON.stringify(msg));
 }
-

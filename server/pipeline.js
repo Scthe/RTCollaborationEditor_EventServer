@@ -1,7 +1,6 @@
 'use strict';
 
-var RedisAdapter = require('./redis_adapter'),
-    Q = require('q');
+var RedisAdapter = require('./redis_adapter');
 
 /**
  * Ok, so You've like got a message, right ? The from-client type of message.
@@ -17,31 +16,16 @@ function Pipeline(app, clientData, emitterCallbacks) {
 
   this.clientData = clientData;
   this.redisAdapter = new RedisAdapter(clientData, emitterCallbacks);
-
-
-  // subscribe client to chat room events
-  // THEN set the message callback AND add client to the chat room list ( sadd := set add)
-  // THEN get client count after changes
-  // THEN publish 'client connected' event to queue
+  this.emitterCallbacks = emitterCallbacks;
 
   var self = this,
-      getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter),
-      onPropagatedMessage = function (ch, msg) {
-        /* jshint unused:false */ // ch is not used
-        var m = JSON.parse(msg);
-        var data = m.payload;
+      getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter);
 
-        // TODO remove msg.type if, make it const time
-        if (m.type === 'msg') {
-          emitterCallbacks.operation(data);
-        } else if (m.type === 'join') {
-          emitterCallbacks.join(data);
-        } else { // disconnect
-          emitterCallbacks.disconnect(data);
-        }
-      };
-
-  self.redisAdapter.init(clientData.clientId, onPropagatedMessage)
+  // subscribe client to document events
+  // THEN set the message callback AND add client to the document's user list ( sadd := set add)
+  // THEN get client count after changes
+  // THEN publish 'client connected' event to queue
+  self.redisAdapter.init(clientData.clientId, onPropagatedMessage.bind(self))
     .then(getUsersForDocument)
     .then(function (count) {
       var m = {
@@ -58,8 +42,9 @@ function Pipeline(app, clientData, emitterCallbacks) {
 }
 
 Pipeline.prototype = {
-  onDisconnected    : onDisconnected,
-  onOperationMessage: onOperationMessage
+  onDisconnected     : onDisconnected,
+  onOperationMessage : onOperationMessage,
+  onPropagatedMessage: onPropagatedMessage
 };
 
 module.exports = Pipeline;
@@ -70,7 +55,7 @@ function onDisconnected(app) {
   var self = this,
       getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter);
 
-  // remove client from list of client for this chat room ( srem := set remove)
+  // remove client from document's client list ( srem := set remove)
   // THEN get client count after changes
   // THEN publish 'client disconnected' event to queue
   self.redisAdapter.unsubscribe()
@@ -101,5 +86,21 @@ function onOperationMessage(data) {
   this.redisAdapter.publish(m);
 
   // TODO might as well use node event system to propagate the message to db store
+}
+
+function onPropagatedMessage(ch, msg) {
+  /* jshint unused:false */ // ch is not used
+  /* jshint -W040 */ // binded to Pipeline prototype object
+  var m = JSON.parse(msg);
+  var data = m.payload;
+
+  // TODO remove msg.type if, make it const time
+  if (m.type === 'msg') {
+    this.emitterCallbacks.operation(data);
+  } else if (m.type === 'join') {
+    this.emitterCallbacks.join(data);
+  } else { // disconnect
+    this.emitterCallbacks.disconnect(data);
+  }
 }
 
