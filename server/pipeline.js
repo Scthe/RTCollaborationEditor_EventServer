@@ -24,15 +24,24 @@ function Pipeline(app, clientData, emitterCallbacks) {
   // THEN get client count after changes
   // THEN publish 'client connected' event to queue
 
+  var self = this,
+      getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter);
+//      publishUserJoin = this.redisAdapter.publishUserJoin.bind(this.redisAdapter, clientData);
 
-  this.redisAdapter.init()
-    .then(this.redisAdapter.getUsersForDocument.bind(this.redisAdapter))
-    .then(this.redisAdapter.publishUserJoin.bind(this.redisAdapter, clientData))
+  self.redisAdapter.init()
+    .then(getUsersForDocument)
+    .then(function (count) {
+      var m = {
+        type   : 'join',
+        payload: { client: clientData.clientId, user_count: count }
+      };
+      return  self.redisAdapter.publish(m);
+    })
     .catch(console.printStackTrace)
     .done();
 
   // node-level message
-  app.emit('new user', clientData);
+  app.emit('new user', clientData); // TODO move to promise chain, include current users list
 }
 
 Pipeline.prototype = {
@@ -59,7 +68,8 @@ function onOperationMessage(data) {
 
   // publish
   data.username = this.clientData.clientId;
-  this.redisAdapter.publishOperation(data);
+  var m = {type: 'msg', payload: data};
+  this.redisAdapter.publish(m);
 
   // TODO might as well use node event system to propagate the message to db store
 }

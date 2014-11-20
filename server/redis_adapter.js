@@ -42,8 +42,7 @@ RedisAdapter.prototype = {
   getUsersForDocument: function () {
     return Q.denodeify(redisPublisher.scard.bind(redisPublisher, this.documentUsersPath))();
   },
-  publishUserJoin    : publishUserJoin,
-  publishOperation   : publishMessage
+  publish            : publish
 };
 
 module.exports = RedisAdapter;
@@ -106,20 +105,10 @@ function unsubscribe() {
     .done();
 }
 
-function publishMessage(msg) {
+function publish(msg) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var m = {type: 'msg', payload: msg};
-  redisPublisher.publish(this.documentPath, JSON.stringify(m));
-}
-
-function publishUserJoin(clientData, count) {
-  /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var m = {
-    type   : 'join',
-    payload: { client: clientData.clientId, user_count: count }
-  };
   var redisPublish = Q.nbind(redisPublisher.publish, redisPublisher);
-  return redisPublish(this.documentPath, JSON.stringify(m));
+  return redisPublish(this.documentPath, JSON.stringify(msg));
 }
 
 function publishUserLeft(clientData, count) {
