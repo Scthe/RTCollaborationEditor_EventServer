@@ -158,7 +158,7 @@
         socket.emit('selection', msgTmpl);
       });
 
-      /* TODO #disconnect test
+      /* TODO #disconnect test, use not reconnect client flag ?
        it('#disconnect', function (done) {
        socket.on('connect', function () {
        pipelineForwardedCalls._onDisconnected = function (data) {

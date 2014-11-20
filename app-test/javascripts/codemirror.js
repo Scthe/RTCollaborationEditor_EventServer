@@ -977,6 +977,7 @@
     this.ranges = ranges;
     this.primIndex = primIndex;
   }
+  CodeMirror.Selection = Selection;
 
   Selection.prototype = {
     primary: function() { return this.ranges[this.primIndex]; },
@@ -1013,6 +1014,7 @@
   function Range(anchor, head) {
     this.anchor = anchor; this.head = head;
   }
+  CodeMirror.Range = Range;
 
   Range.prototype = {
     from: function() { return minPos(this.anchor, this.head); },
@@ -2397,8 +2399,11 @@
     // possible when it is clear that nothing happened. hasSelection
     // will be the case when there is a lot of text in the textarea,
     // in which case reading its value would be expensive.
-    if (!cm.state.focused || (hasSelection(input) && !prevInput) || isReadOnly(cm) || cm.options.disableInput)
-      return false;
+    
+    // TODO hack for testing only - disable quick bail
+    // if (!cm.state.focused || (hasSelection(input) && !prevInput) || isReadOnly(cm) || cm.options.disableInput)
+    //  return false;
+    
     // See paste handler for more on the fakedLastChar kludge
     if (cm.state.pasteIncoming && cm.state.fakedLastChar) {
       input.value = input.value.substring(0, input.value.length - 1);
@@ -2407,6 +2412,11 @@
     var text = input.value;
     // If nothing changed, bail.
     if (text == prevInput && !cm.somethingSelected()) return false;
+    
+    //console.log('changed from last check !');
+    //console.log(cm.state.focused, '/t');
+    //console.log(hasSelection(input) && !prevInput, '/f');
+    
     // Work around nonsensical selection resetting in IE9/10, and
     // inexplicable appearance of private area unicode characters on
     // some key combos in Mac (#2689).
@@ -3227,6 +3237,11 @@
 
   var lastStoppedKey = null;
   function onKeyDown(e) {
+    //var charCode = (typeof e.which == "number") ? e.which : e.keyCode;
+    //if (charCode) {
+    //  console.log('key DOWN:'+ String.fromCharCode(charCode));
+    //}
+    
     var cm = this;
     ensureFocus(cm);
     if (signalDOMEvent(cm, e)) return;
@@ -3263,11 +3278,21 @@
   }
 
   function onKeyUp(e) {
+    //var charCode = (typeof e.which == "number") ? e.which : e.keyCode;
+    //if (charCode) {
+    //  console.log('key UP:'+ String.fromCharCode(charCode));
+    //}
+    
     if (e.keyCode == 16) this.doc.sel.shift = false;
     signalDOMEvent(this, e);
   }
 
   function onKeyPress(e) {
+    //var charCode = (typeof e.which == "number") ? e.which : e.keyCode;
+    //if (charCode) {
+    //  console.log('press:'+ String.fromCharCode(charCode));
+    //}
+    
     var cm = this;
     if (signalDOMEvent(cm, e) || e.ctrlKey && !e.altKey || mac && e.metaKey) return;
     var keyCode = e.keyCode, charCode = e.charCode;
