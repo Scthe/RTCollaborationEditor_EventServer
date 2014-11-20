@@ -19,26 +19,32 @@ function Pipeline(app, clientData, emitterCallbacks) {
   this.emitterCallbacks = emitterCallbacks;
 
   var self = this,
-      getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter);
+      getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter),
+      clientEditorCount = -1; // how many editors does this client have open to this doc
 
   // subscribe client to document events
   // THEN set the message callback AND add client to the document's user list
   // THEN get client count after changes
   // THEN publish 'client connected' event to queue
   self.redisAdapter.init(onPropagatedMessage.bind(self))
+    .then(function (_clientEditorCount) {
+      clientEditorCount = _clientEditorCount;
+    })
     .then(getUsersForDocument)
-    .then(function (count) {
+    .then(function (userList) {
       var m = {
         type   : 'join',
-        payload: { client: clientData.clientId, user_count: count }
+        payload: { client: clientData.clientId, user_count: userList }
       };
       return  self.redisAdapter.publish(m);
     })
+    .then(function () {
+      if (clientEditorCount === 1) {
+        app.emit('new user', self.clientData);
+      }
+    })
     .catch(console.printStackTrace)
     .done();
-
-  // node-level message
-  app.emit('new user', clientData); // TODO move to promise chain, include current users list
 }
 
 Pipeline.prototype = {
@@ -53,25 +59,27 @@ module.exports = Pipeline;
 function onDisconnected(app) {
   /* jshint -W040 */ // binded to Pipeline prototype object
   var self = this,
-      getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter);
+      getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter),
+      removeUserNodeMessage = app.emit.bind(app, 'remove user', self.clientData);
 
   // remove client from document's client list
   // THEN get client count after changes
   // THEN publish 'client disconnected' event to queue
   self.redisAdapter.unsubscribe()
-    .then(getUsersForDocument)
-    .then(function (count) {
-      var m = {
-        type   : 'left',
-        payload: { client: self.clientData.clientId, user_count: count }
-      };
-      return  self.redisAdapter.publish(m);
+    .then(function (clientEditorCount) {
+      return clientEditorCount > 0 ? '' // there is at least one tab more with this doc open
+        : getUsersForDocument() // user closed last tab containing this doc
+        .then(function (userList) {
+          var m = {
+            type   : 'left',
+            payload: { client: self.clientData.clientId, user_count: userList }
+          };
+          return  self.redisAdapter.publish(m);
+        })
+        .then(removeUserNodeMessage);
     })
     .catch(console.printStackTrace)
     .done();
-
-  // node-level message
-  app.emit('remove user', this.clientData); // TODO move to promise chain, include current users list
 }
 
 function onOperationMessage(data) {
