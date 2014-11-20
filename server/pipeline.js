@@ -54,7 +54,23 @@ module.exports = Pipeline;
 
 function onDisconnected(app) {
   /* jshint -W040 */ // binded to Pipeline prototype object
-  this.redisAdapter.unsubscribe();
+  var self = this,
+      getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter);
+
+  // remove client from list of client for this chat room ( srem := set remove)
+  // THEN get client count after changes
+  // THEN publish 'client disconnected' event to queue
+  self.redisAdapter.unsubscribe()
+    .then(getUsersForDocument)
+    .then(function (count) {
+      var m = {
+        type   : 'left',
+        payload: { client: self.clientData.clientId, user_count: count }
+      };
+      return  self.redisAdapter.publish(m);
+    })
+    .catch(console.printStackTrace)
+    .done();
 
   // node-level message
   app.emit('remove user', this.clientData);

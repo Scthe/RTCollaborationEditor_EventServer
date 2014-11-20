@@ -10,11 +10,11 @@ var documentPathPattern = 'document/%s',
     documentUsersPathPattern = 'document/%s/user_list';
 
 // separate publisher needed since can't publish in subscribe mode
-var redisPublisher = defaultRedisClient('PUBLISHER');
+var redisPublisher = redisClientFactory('PUBLISHER');
 
 // create redis monitor to log all operations
 (function () {
-  var monitor = defaultRedisClient('MONITOR');
+  var monitor = redisClientFactory('MONITOR');
   monitor.monitor(function () {
     console.info('Entering monitoring mode.');
   });
@@ -33,7 +33,7 @@ function RedisAdapter(clientData, msgCallbacks) {
   this.documentPath = util.format(documentPathPattern, clientData.documentId);
   this.documentUsersPath = util.format(documentUsersPathPattern, clientData.documentId);
   this._messageHandler = _.partial(_messageHandlerProto, msgCallbacks); // TODO remove from here
-  this.client = defaultRedisClient();
+  this.client = redisClientFactory();
 }
 
 RedisAdapter.prototype = {
@@ -50,15 +50,17 @@ module.exports = RedisAdapter;
 
 function subscribe(clientId) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var that = this,
+
+  var self = this,
       redisSubscribe = Q.nbind(this.client.subscribe, this.client),
       setMessageHandler = function () {
-        that.client.on('message', that._messageHandler);
+        self.client.on('message', self._messageHandler);
       },
       addToClientList = function () {
         var redisAddClient = Q.nbind(redisPublisher.sadd, redisPublisher);
-        return redisAddClient(that.documentUsersPath, clientId);
+        return redisAddClient(self.documentUsersPath, clientId);
       };
+
   return redisSubscribe(this.documentPath).then(setMessageHandler).then(addToClientList);
 }
 
@@ -77,7 +79,7 @@ function _messageHandlerProto(msgCallbacks, ch, msg) { // TODO move to pipeline
   }
 }
 
-function defaultRedisClient() {
+function redisClientFactory() {
   var client = redis.createClient(config.redis_port, config.redis_host);
 
   var clientLogName = arguments.length > 0 ? arguments[0] : 'from socket';
@@ -90,34 +92,17 @@ function defaultRedisClient() {
 
 function unsubscribe() {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var that = this;
-  that.client.quit();
+  var self = this;
+  self.client.quit();
 
-  // remove client from list of client for this chat room ( srem := set remove)
-  // THEN get client count after changes
-  // THEN publish 'client disconnected' event to queue
   var redisRemoveClient = Q.nbind(redisPublisher.srem, redisPublisher);
 
-  redisRemoveClient(that.documentUsersPath, that.clientData.clientId)
-    .then(that._getUserCount.bind(that))
-    .then(publishUserLeft.bind(that, that.clientData))
-    .catch(console.printStackTrace)
-    .done();
+  return redisRemoveClient(self.documentUsersPath, self.clientData.clientId);
 }
 
 function publish(msg) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var redisPublish = Q.nbind(redisPublisher.publish, redisPublisher);
   return redisPublish(this.documentPath, JSON.stringify(msg));
-}
-
-function publishUserLeft(clientData, count) {
-  /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var m = {
-    type   : 'left',
-    payload: { client: clientData.clientId, user_count: count }
-  };
-  var redisPublish = Q.nbind(redisPublisher.publish, redisPublisher);
-  return redisPublish(this.documentPath, JSON.stringify(m));
 }
 
