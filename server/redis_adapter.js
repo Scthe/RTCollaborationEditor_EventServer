@@ -3,6 +3,7 @@
 
 var redis = require('redis'),
     util = require('util'),
+    _ = require('underscore'),
     Q = require('q');
 
 var documentPathPattern = 'document/%s',
@@ -66,8 +67,8 @@ function subscribe(messageHandler) {
       redisSubscribe = Q.nbind(this.client.subscribe, this.client),
       setMessageHandler = self.client.on.bind(self.client, 'message', messageHandler),
       addToClientList = function () {
-        var redisAddClient = Q.nbind(redisPublisher.sadd, redisPublisher);
-        return redisAddClient(self.documentUsersPath, self.clientId);
+        var redisAddClient = Q.nbind(redisPublisher.hincrby, redisPublisher);
+        return redisAddClient(self.documentUsersPath, self.clientId, 1);
       };
 
   return redisSubscribe(self.documentPath).then(setMessageHandler).then(addToClientList);
@@ -78,15 +79,22 @@ function unsubscribe() {
   var self = this;
   self.client.quit();
 
-  var redisRemoveClient = Q.nbind(redisPublisher.srem, redisPublisher);
-
-  return redisRemoveClient(self.documentUsersPath, self.clientId);
+  var redisAddClient = Q.nbind(redisPublisher.hincrby, redisPublisher);
+  return redisAddClient(self.documentUsersPath, self.clientId, -1);
 }
 
 function getUsersForDocument() {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var f = Q.denodeify(redisPublisher.scard.bind(redisPublisher, this.documentUsersPath));
-  return f();
+  var f = Q.denodeify(redisPublisher.hgetall.bind(redisPublisher, this.documentUsersPath)),
+      filterList = function (val) {
+        return _.chain(val)
+          .keys()
+          .filter(function (e) {
+            return val[e] > 0;
+          })
+          .value();
+      };
+  return f().then(filterList);
 }
 
 function publish(msg) {

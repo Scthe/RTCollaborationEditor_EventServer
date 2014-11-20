@@ -22,7 +22,7 @@ function Pipeline(app, clientData, emitterCallbacks) {
       getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter);
 
   // subscribe client to document events
-  // THEN set the message callback AND add client to the document's user list ( sadd := set add)
+  // THEN set the message callback AND add client to the document's user list
   // THEN get client count after changes
   // THEN publish 'client connected' event to queue
   self.redisAdapter.init(onPropagatedMessage.bind(self))
@@ -55,7 +55,7 @@ function onDisconnected(app) {
   var self = this,
       getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter);
 
-  // remove client from document's client list ( srem := set remove)
+  // remove client from document's client list
   // THEN get client count after changes
   // THEN publish 'client disconnected' event to queue
   self.redisAdapter.unsubscribe()

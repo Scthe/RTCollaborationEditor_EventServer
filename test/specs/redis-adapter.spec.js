@@ -148,14 +148,14 @@
       });
 
       it('adds client to document\'s client list', function () {
-        var publisher = {sadd: sinon.spy()};
+        var publisher = {hincrby: sinon.spy()};
         var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
 
         adapter.init({});
 
-        expect(publisher.sadd).calledOnce;
-        expect(publisher.sadd).calledWithExactly(adapter.documentUsersPath, clientData.clientId);
+        expect(publisher.hincrby).calledOnce;
+        expect(publisher.hincrby).calledWithExactly(adapter.documentUsersPath, clientData.clientId, 1);
       });
 
     });
@@ -174,15 +174,15 @@
       });
 
       it('removes client from document\'s active users list', function () {
-        var publisher = {srem: sinon.spy()},
+        var publisher = {hincrby: sinon.spy()},
             RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
         adapter.init();
 
         adapter.unsubscribe();
 
-        expect(publisher.srem).called;
-        expect(publisher.srem).calledWith(adapter.documentUsersPath, clientData.clientId);
+        expect(publisher.hincrby).called;
+        expect(publisher.hincrby).calledWith(adapter.documentUsersPath, clientData.clientId, -1);
       });
 
     });
@@ -208,15 +208,15 @@
     describe('#getUsersForDocument', function () {
 
       it('forwards to redis', function () {
-        var publisher = {scard: sinon.spy()},
+        var publisher = {hgetall: sinon.spy()},
             RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
         adapter.init();
 
         adapter.getUsersForDocument();
 
-        expect(publisher.scard).called;
-        expect(publisher.scard).calledWith(adapter.documentUsersPath);
+        expect(publisher.hgetall).called;
+        expect(publisher.hgetall).calledWith(adapter.documentUsersPath);
       });
     });
 
