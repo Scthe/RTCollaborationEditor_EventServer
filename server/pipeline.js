@@ -25,10 +25,23 @@ function Pipeline(app, clientData, emitterCallbacks) {
   // THEN publish 'client connected' event to queue
 
   var self = this,
-      getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter);
-//      publishUserJoin = this.redisAdapter.publishUserJoin.bind(this.redisAdapter, clientData);
+      getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter),
+      onPropagatedMessage = function (ch, msg) {
+        /* jshint unused:false */ // ch is not used
+        var m = JSON.parse(msg);
+        var data = m.payload;
 
-  self.redisAdapter.init()
+        // TODO remove msg.type if, make it const time
+        if (m.type === 'msg') {
+          emitterCallbacks.operation(data);
+        } else if (m.type === 'join') {
+          emitterCallbacks.join(data);
+        } else { // disconnect
+          emitterCallbacks.disconnect(data);
+        }
+      };
+
+  self.redisAdapter.init(clientData.clientId, onPropagatedMessage)
     .then(getUsersForDocument)
     .then(function (count) {
       var m = {

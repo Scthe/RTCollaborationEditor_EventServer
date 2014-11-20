@@ -24,37 +24,40 @@ var redisPublisher = redisClientFactory('PUBLISHER');
     console.redis(
       util.format('[REDIS] %d:%d:%d $%s', d.getHours(), d.getMinutes(), d.getSeconds(), args.join(' ')));
   });
-  return monitor;
 })();
 
 
-function RedisAdapter(clientData, msgCallbacks) {
+function RedisAdapter(clientData) {
   this.clientData = clientData;  // TODO remove from here ?
   this.documentPath = util.format(documentPathPattern, clientData.documentId);
   this.documentUsersPath = util.format(documentUsersPathPattern, clientData.documentId);
-  this._messageHandler = _.partial(_messageHandlerProto, msgCallbacks); // TODO remove from here
   this.client = redisClientFactory();
 }
 
 RedisAdapter.prototype = {
   init               : subscribe,
   unsubscribe        : unsubscribe,
-  getUsersForDocument: function () {
-    return Q.denodeify(redisPublisher.scard.bind(redisPublisher, this.documentUsersPath))();
-  },
+  getUsersForDocument: getUsersForDocument,
   publish            : publish
 };
 
 module.exports = RedisAdapter;
 
+function getUsersForDocument() {
+  /* jshint -W040 */ // binded to RedisAdapter prototype object
+  return Q.denodeify(redisPublisher.scard.bind(redisPublisher, this.documentUsersPath))();
+}
 
-function subscribe(clientId) {
+function subscribe(clientId, messageHandler) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
 
   var self = this,
       redisSubscribe = Q.nbind(this.client.subscribe, this.client),
       setMessageHandler = function () {
-        self.client.on('message', self._messageHandler);
+        // there is no a particular need to separate setMessageHandler
+        // and addToClientList. Although it makes for a nicer sentence
+        // on invocation.
+        self.client.on('message', messageHandler);
       },
       addToClientList = function () {
         var redisAddClient = Q.nbind(redisPublisher.sadd, redisPublisher);
@@ -62,21 +65,6 @@ function subscribe(clientId) {
       };
 
   return redisSubscribe(this.documentPath).then(setMessageHandler).then(addToClientList);
-}
-
-function _messageHandlerProto(msgCallbacks, ch, msg) { // TODO move to pipeline
-  /* jshint unused:false */ // ch is not used
-  var m = JSON.parse(msg);
-  var data = m.payload;
-
-  // TODO remove msg.type if, make it const time
-  if (m.type === 'msg') {
-    msgCallbacks.operation(data);
-  } else if (m.type === 'join') {
-    msgCallbacks.join(data);
-  } else { // disconnect
-    msgCallbacks.disconnect(data);
-  }
 }
 
 function redisClientFactory() {
