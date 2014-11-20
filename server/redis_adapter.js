@@ -29,44 +29,41 @@ var redisPublisher = defaultRedisClient('PUBLISHER');
 
 
 function RedisAdapter(clientData, msgCallbacks) {
-  var that = this;
-  this.clientData = clientData;
+  this.clientData = clientData;  // TODO remove from here ?
   this.documentPath = util.format(documentPathPattern, clientData.documentId);
   this.documentUsersPath = util.format(documentUsersPathPattern, clientData.documentId);
-  this._messageHandler = _.partial(_messageHandlerProto, msgCallbacks);
+  this._messageHandler = _.partial(_messageHandlerProto, msgCallbacks); // TODO remove from here
   this.client = defaultRedisClient();
-
-  // subscribe client to chat room events
-  // THEN set the message callback AND add client to the chat room list ( sadd := set add)
-  // THEN get client count after changes
-  // THEN publish 'client connected' event to queue
-  var redisSubscribe = Q.nbind(this.client.subscribe, this.client);
-
-  redisSubscribe(this.documentPath)
-    .then(function () {
-      that.client.on('message', that._messageHandler);
-
-      var redisAddClient = Q.nbind(redisPublisher.sadd, redisPublisher);
-      return redisAddClient(that.documentUsersPath, clientData.clientId);
-    })
-    .then(that._getUserCount.bind(that))
-    .then(publishUserJoin.bind(that, that.clientData))
-    .catch(console.printStackTrace)
-    .done();
 }
 
 RedisAdapter.prototype = {
-  unsubscribe     : unsubscribe,
-  publishOperation: publishMessage,
-  _getUserCount   : function () {
+  init               : subscribe,
+  unsubscribe        : unsubscribe,
+  getUsersForDocument: function () {
     return Q.denodeify(redisPublisher.scard.bind(redisPublisher, this.documentUsersPath))();
-  }
+  },
+  publishUserJoin    : publishUserJoin,
+  publishOperation   : publishMessage
 };
 
 module.exports = RedisAdapter;
 
 
-function _messageHandlerProto(msgCallbacks, ch, msg) {
+function subscribe(clientId) {
+  /* jshint -W040 */ // binded to RedisAdapter prototype object
+  var that = this,
+      redisSubscribe = Q.nbind(this.client.subscribe, this.client),
+      setMessageHandler = function () {
+        that.client.on('message', that._messageHandler);
+      },
+      addToClientList = function () {
+        var redisAddClient = Q.nbind(redisPublisher.sadd, redisPublisher);
+        return redisAddClient(that.documentUsersPath, clientId);
+      };
+  return redisSubscribe(this.documentPath).then(setMessageHandler).then(addToClientList);
+}
+
+function _messageHandlerProto(msgCallbacks, ch, msg) { // TODO move to pipeline
   /* jshint unused:false */ // ch is not used
   var m = JSON.parse(msg);
   var data = m.payload;

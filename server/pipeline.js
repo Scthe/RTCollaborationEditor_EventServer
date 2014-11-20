@@ -1,6 +1,7 @@
 'use strict';
 
-var RedisAdapter = require('./redis_adapter');
+var RedisAdapter = require('./redis_adapter'),
+    Q = require('q');
 
 /**
  * Ok, so You've like got a message, right ? The from-client type of message.
@@ -16,6 +17,19 @@ function Pipeline(app, clientData, emitterCallbacks) {
 
   this.clientData = clientData;
   this.redisAdapter = new RedisAdapter(clientData, emitterCallbacks);
+
+
+  // subscribe client to chat room events
+  // THEN set the message callback AND add client to the chat room list ( sadd := set add)
+  // THEN get client count after changes
+  // THEN publish 'client connected' event to queue
+
+
+  this.redisAdapter.init()
+    .then(this.redisAdapter.getUsersForDocument.bind(this.redisAdapter))
+    .then(this.redisAdapter.publishUserJoin.bind(this.redisAdapter, clientData))
+    .catch(console.printStackTrace)
+    .done();
 
   // node-level message
   app.emit('new user', clientData);
