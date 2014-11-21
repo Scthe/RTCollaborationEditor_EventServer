@@ -14,6 +14,7 @@
         clientData;
 
     beforeEach(function () {
+      RedisAdapterProxy.valueOverrides = {};
       var moduleOverrides = {
         './redis_adapter': RedisAdapterProxy,
         'q'              : PromiseSync
@@ -88,13 +89,35 @@
         expect(p.redisAdapter.__publish).calledWithExactly(m);
       });
 
-      it('propagates to node message bus', function () {
-        /* jshint -W031 */ // well that's cute
+      describe('when user JUST STARTED EDITING', function () {
 
-        new Pipeline(app, clientData);
+        beforeEach(function () {
+          RedisAdapterProxy.valueOverrides.__init = 1;
+        });
 
-        expect(app.emit).calledOnce;
-        expect(app.emit).calledWithExactly('new user', clientData);
+        it('propagates to node message bus', function () {
+          /* jshint -W031 */ // well that's cute
+          new Pipeline(app, clientData);
+
+          expect(app.emit).calledOnce;
+          expect(app.emit).calledWithExactly('new user', clientData);
+        });
+
+      });
+
+      describe('when user IS ALREADY EDITING', function () {
+
+        beforeEach(function () {
+          RedisAdapterProxy.valueOverrides.__init = 2;
+        });
+
+        it('does not propagate to node message bus', function () {
+          /* jshint -W031 */ // well that's cute
+          new Pipeline(app, clientData);
+
+          expect(app.emit).not.called;
+        });
+
       });
 
     });
@@ -113,35 +136,72 @@
         expect(p.redisAdapter.__unsubscribe).calledOnce;
       });
 
-      it('retrieves user list', function () {
-        var p = new Pipeline(app, clientData);
-        p.redisAdapter.__getUsersForDocument.reset();
-        p.onDisconnected(emitter);
-        expect(p.redisAdapter.__getUsersForDocument).calledOnce;
+      describe('when user FINISHED EDITING', function () {
+        beforeEach(function () {
+          RedisAdapterProxy.valueOverrides.__unsubscribe = 0;
+        });
+
+        it('retrieves user list', function () {
+          var p = new Pipeline(app, clientData);
+          p.redisAdapter.__getUsersForDocument.reset();
+          p.onDisconnected(emitter);
+          expect(p.redisAdapter.__getUsersForDocument).calledOnce;
+        });
+
+        it('publishes user list', function () {
+          var m = {
+            type   : 'left',
+            payload: { client: clientData.clientId, user_count: sinon.match.any }// TODO override user count
+          };
+          var p = new Pipeline(app, clientData);
+          p.redisAdapter.__getUsersForDocument.reset();
+
+          p.onDisconnected(emitter);
+
+          expect(p.redisAdapter.__publish).calledWithExactly(m);
+        });
+
+        it('propagates to node message bus', function () {
+          var pipeline = new Pipeline(app, clientData);
+          var emitter = {};
+          emitter.emit = sinon.spy();
+
+          pipeline.onDisconnected(emitter);
+
+          expect(emitter.emit).calledOnce;
+          expect(emitter.emit).calledWithExactly('remove user', clientData, undefined); // last undefined is added through Q
+        });
       });
 
-      it('publishes user list', function () {
-        var m = {
-          type   : 'left',
-          payload: { client: clientData.clientId, user_count: sinon.match.any }
-        };
-        var p = new Pipeline(app, clientData);
-        p.redisAdapter.__getUsersForDocument.reset();
+      describe('when OTHER editor INSTANCES exist', function () {
+        beforeEach(function () {
+          RedisAdapterProxy.valueOverrides.__unsubscribe = 1;
+        });
 
-        p.onDisconnected(emitter);
+        it('does not retrieve user list', function () {
+          var p = new Pipeline(app, clientData);
+          p.redisAdapter.__getUsersForDocument.reset();
+          p.onDisconnected(emitter);
+          expect(p.redisAdapter.__getUsersForDocument).not.called;
+        });
 
-        expect(p.redisAdapter.__publish).calledWithExactly(m);
-      });
+        it('does not publish user list', function () {
+          var p = new Pipeline(app, clientData);
+          p.redisAdapter.__publish.reset();
+          p.onDisconnected(emitter);
+          expect(p.redisAdapter.__publish).not.called;
+        });
 
-      it('propagates to node message bus', function () {
-        var pipeline = new Pipeline(app, clientData);
-        var emitter = {};
-        emitter.emit = sinon.spy();
+        it('does not propagate to node message bus', function () {
+          var pipeline = new Pipeline(app, clientData);
+          var emitter = {};
+          emitter.emit = sinon.spy();
 
-        pipeline.onDisconnected(emitter);
+          pipeline.onDisconnected(emitter);
 
-        expect(emitter.emit).calledOnce;
-        expect(emitter.emit).calledWithExactly('remove user', clientData);
+          expect(emitter.emit).not.called;
+        });
+
       });
 
     });
@@ -248,7 +308,7 @@
         self[name].call(arguments);
         var args = self[name].args;
         args[args.length - 1 ] = arguments;
-        return new PromiseSync();
+        return new PromiseSync(RedisAdapterProxy.valueOverrides[name]);
       };
     }
   }
