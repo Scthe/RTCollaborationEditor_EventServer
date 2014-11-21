@@ -150,14 +150,6 @@
         socket.emit('operation', msgTmpl);
       });
 
-      it_('#emit_selection', function (done) {
-        pipelineForwardedCalls._onSelectionMessage = function (data) {
-          expect(data).to.deep.equal(msgTmpl);
-          done();
-        };
-        socket.emit('selection', msgTmpl);
-      });
-
       /* TODO #disconnect test, use not reconnect client flag ?
        it('#disconnect', function (done) {
        socket.on('connect', function () {
@@ -185,7 +177,6 @@
 
       var tests = [
         ['#emit_operation', 'operation', 'operation'],
-        ['#emit_selection', 'selection', 'selection'],
         ['#emit_reconnect', 'reconnect', 'join'],
         ['#emit_client_left', 'client_left', 'disconnect']
       ];

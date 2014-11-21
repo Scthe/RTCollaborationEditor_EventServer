@@ -11,7 +11,8 @@ router.get('/:id', function (req, res) {
   /* jshint unused:false */ // req is not used
   var data = {
     documentId: req.params.id,
-    clientId : Date.now() % 1000 // this can be read from cookie
+    clientId  : Date.now() % 1000 // this can be read from cookie
+//    clientId  : 15
   };
 
   var token = jwt.sign(data, config.secret_key, { expiresInMinutes: 60 * 5 });

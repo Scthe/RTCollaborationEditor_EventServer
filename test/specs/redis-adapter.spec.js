@@ -92,245 +92,132 @@
     describe('#create', function () {
 
       it('returns valid object', function () {
-        var RedisAdapter = requireRedisAdapter();
-        var obj = new RedisAdapter(clientData, voidFunction, voidFunction);
+        var RedisAdapter = requireRedisAdapter(),
+            obj = new RedisAdapter(clientData, voidFunction, voidFunction);
         expect(obj).to.exist;
+        expect(obj.clientId).to.exist;
+        expect(obj.documentPath).to.exist;
+        expect(obj.documentUsersPath).to.exist;
+        expect(obj.client).to.exist;
       });
 
       it('sets correct document path', function () {
-        var client = {subscribe: sinon.spy()};
-        var RedisAdapter = requireRedisAdapter(undefined, undefined, client);
-
+        var RedisAdapter = requireRedisAdapter();
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
-
         expect(adapter.documentPath).to.contain(clientData.documentId);
       });
 
       it('sets correct document users path', function () {
-        var client = {subscribe: sinon.spy()};
-        var RedisAdapter = requireRedisAdapter(undefined, undefined, client);
-
+        var RedisAdapter = requireRedisAdapter();
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
-
         expect(adapter.documentUsersPath).to.contain(clientData.documentId);
       });
 
-      it('holds client data for further use', function () {
-        var client = {subscribe: sinon.spy()};
-        var RedisAdapter = requireRedisAdapter(undefined, undefined, client);
-
+      it('creates redis client', function () {
+        var redisClient = { id: faker.internet.password() },
+            RedisAdapter = requireRedisAdapter(undefined, undefined, redisClient);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
-
-        expect(adapter.clientData).to.be.equal(clientData);
+        expect(adapter.client.id).to.be.equal(redisClient.id);
       });
-      
-      it('subscribes client to redis queue', function () {
-        var client = {subscribe: sinon.spy()};
-        var RedisAdapter = requireRedisAdapter(undefined, undefined, client);
+    });
 
+    describe('#init', function () {
+
+      it('subscribes client to redis queue', function () {
+        var client = {subscribe: sinon.spy()},
+            RedisAdapter = requireRedisAdapter(undefined, undefined, client);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
+        adapter.init();
 
         expect(client.subscribe).called;
         expect(client.subscribe).calledWith(adapter.documentPath);
       });
 
-      it('adds client to document active users list', function (done) {
-        var publisher = {sadd: sinon.spy()};
-        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
-
-        PromiseSync.doneCallback = function () {
-          expect(publisher.sadd).calledOnce;
-          expect(publisher.sadd).calledWithExactly(adapter.documentUsersPath, adapter.clientData.clientId);
-          done();
-        };
-
+      it('sets the message handler', function () {
+        var client = {on: sinon.spy()};
+        client.on.bind = sinon.spy();
+        var msgHandler = { id: faker.internet.password() },
+            RedisAdapter = requireRedisAdapter(undefined, undefined, client);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
+        adapter.init(msgHandler);
+
+        expect(client.on.bind).called;
+        expect(client.on.bind).calledWith(sinon.match.any, 'message', msgHandler);
       });
 
-      it('broadcasts event \'new user\'', function (done) {
-        // given
-        var publisher = {publish: sinon.spy()};
+      it('adds client to document\'s client list', function () {
+        var publisher = {hincrby: sinon.spy()};
         var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
-
-        // then
-        var msgTemplate = {
-          type   : 'join',
-          payload: { client: clientData.clientId }
-        };
-
-        PromiseSync.doneCallback = function () {
-          expect(publisher.publish).calledOnce;
-          expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
-          var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
-          expect(args).to.containEql(msgTemplate);
-
-          done();
-        };
-
-        // when
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+
+        adapter.init({});
+
+        expect(publisher.hincrby).calledOnce;
+        expect(publisher.hincrby).calledWithExactly(adapter.documentUsersPath, clientData.clientId, 1);
       });
-
-      it('publishes user count', function (done) {
-        // given
-        var publisher = {
-          publish: sinon.spy(),
-          scard  : sinon.stub().returns(faker.random.number())
-        };
-        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
-
-        // then
-        var msgTemplate = {
-          payload: { user_count: publisher.scard() }
-        };
-
-        PromiseSync.doneCallback = function () {
-          expect(publisher.scard).called;
-          expect(publisher.scard).calledWith(adapter.documentUsersPath, sinon.match.func);
-          expect(publisher.publish).calledOnce;
-          expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
-          var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
-          expect(args).to.containEql(msgTemplate);
-
-          done();
-        };
-
-        // when
-        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
-      });
-
-    });
-
-    describe('publishes', function () {
-
-      var publisher,
-          adapter;
-
-      beforeEach(function () {
-        publisher = {publish: sinon.spy()};
-        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
-
-        adapter = new RedisAdapter(clientData, voidFunction, voidFunction, voidFunction, voidFunction);
-      });
-
-      it('operation', function () {
-        var msg = faker.lorem.sentence();
-        var msgTemplate = { type: 'msg', payload: msg };
-
-        adapter.publishOperation(msg);
-
-        expect(publisher.publish).called;
-        expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
-        var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
-        expect(args).to.containEql(msgTemplate);
-      });
-
-      it('selection', function () {
-        var msg = faker.lorem.sentence();
-        var msgTemplate = { type: 'sel', payload: msg };
-
-        adapter.publishSelection(msg);
-
-        expect(publisher.publish).called;
-        expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
-        var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
-        expect(args).to.containEql(msgTemplate);
-      });
-
-    });
-
-    describe('calls callbacks in case of', function () {
-
-      var publisher,
-          adapter,
-          messageCallbacks;
-
-      beforeEach(function () {
-        publisher = {publish: sinon.spy()};
-        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
-
-        messageCallbacks = {
-          operation : sinon.spy(),
-          selection : sinon.spy(),
-          join      : sinon.spy(),
-          disconnect: sinon.spy()
-        };
-
-        adapter = new RedisAdapter(clientData, messageCallbacks);
-      });
-
-      var tests = [
-        ['operation', 'msg', 'operation'],
-        ['selection', 'sel', 'selection'],
-        ['user join', 'join', 'join'],
-        ['user left', 'left', 'disconnect']
-      ];
-
-      for (var i = 0; i < tests.length; i++) {
-        var testName = tests[i][0],
-            type = tests[i][1],
-            method = tests[i][2];
-
-        it(testName, testCase.bind(undefined, type, method));
-      }
-
-      function testCase(type, method) {
-        var message = {
-          type   : type,
-          payload: {
-            client    : faker.random.number(),
-            user_count: faker.random.number()
-          }
-        };
-        adapter._messageHandler(undefined, JSON.stringify(message));
-        expect(messageCallbacks[method]).called;
-        expect(messageCallbacks[method]).calledWith(message.payload);
-      }
 
     });
 
     describe('#unsubscribe', function () {
 
+      it('quits the redis client', function () {
+        var client = {quit: sinon.spy()},
+            RedisAdapter = requireRedisAdapter(undefined, undefined, client);
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+        adapter.init();
+
+        adapter.unsubscribe();
+
+        expect(client.quit).called;
+      });
+
       it('removes client from document\'s active users list', function () {
-        var publisher = {srem: sinon.spy()};
-        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
+        var publisher = {hincrby: sinon.spy()},
+            RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+        adapter.init();
 
         adapter.unsubscribe();
 
-        expect(publisher.srem).called;
-        expect(publisher.srem).calledWith(adapter.documentUsersPath, adapter.clientData.clientId);
+        expect(publisher.hincrby).called;
+        expect(publisher.hincrby).calledWith(adapter.documentUsersPath, clientData.clientId, -1);
       });
 
-      it('broadcasts event \'user disconnected\' containing user count', function (done) {
-        // given
-        var publisher = {
-          publish: sinon.spy(),
-          scard  : sinon.stub().returns(faker.random.number())
-        };
-        var RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
+    });
+
+    describe('#publish', function () {
+
+      it('forwards to redis', function () {
+        var msg = faker.lorem.sentence(),
+            publisher = {publish: sinon.spy()},
+            RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
         adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+        adapter.init();
 
-        // then
-        var msgTemplate = {
-          type   : 'left',
-          payload: {
-            client    : clientData.clientId,
-            user_count: publisher.scard()
-          }
-        };
-        PromiseSync.doneCallback = function () {
-          expect(publisher.publish).called;
-          expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
-          var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
-          expect(args).to.containEql(msgTemplate);
-          done();
-        };
+        adapter.publish(msg);
 
-        // when
-        adapter.unsubscribe();
+        expect(publisher.publish).called;
+        expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
+        var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+        expect(args).to.containEql(msg);
       });
+    });
 
+    describe('#getUsersForDocument', function () {
+
+      it('forwards to redis', function () {
+        var publisher = {hgetall: sinon.spy()},
+            RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+        adapter.init();
+
+        adapter.getUsersForDocument();
+
+        expect(publisher.hgetall).called;
+        expect(publisher.hgetall).calledWith(adapter.documentUsersPath);
+      });
     });
 
 
@@ -368,5 +255,6 @@
 
   });
 
-})();
+})
+();
 
