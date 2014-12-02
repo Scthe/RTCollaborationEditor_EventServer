@@ -10,10 +10,10 @@ GLOBAL.config = require('../utils/config_loader');
 require('../utils/log_utils')();
 
 var app;
-if (!config.socket_only) {
+if (!config.socketOnly) {
   app = require('../app');
   // start the HTML server
-  var server = app.listen(config.app_port, function () {
+  var server = app.listen(config.appPort, function () {
     var msg = 'Express server listening on port: ' + server.address().port;
     debug(msg);
     console.log(msg);
@@ -21,10 +21,10 @@ if (!config.socket_only) {
 } else {
   var events = require('events');
   app = new events.EventEmitter();
-  var socket_handler = require('../server/socket_handler'); // TODO only app variable differs between branches, merge this !
-  socket_handler(app);
+  var socketHandler = require('../server/socket_handler'); // TODO only app variable differs between branches, merge this !
+  socketHandler(app);
 
-  var msg = 'Socket server listening on port: ' + config.socket_port;
+  var msg = 'Socket server listening on port: ' + config.socketPort;
   debug(msg);
   console.log(msg);
 

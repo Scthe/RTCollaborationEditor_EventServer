@@ -47,7 +47,7 @@ module.exports = RedisAdapter;
 // implementation
 
 function redisClientFactory() {
-  var client = redis.createClient(config.redis_port, config.redis_host);
+  var client = redis.createClient(config.redisPort, config.redisHost);
 
   var clientLogName = arguments.length > 0 ? arguments[0] : 'from socket';
   client.on('ready', function () {
