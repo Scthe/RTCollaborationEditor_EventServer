@@ -28,12 +28,14 @@ var redisPublisher = redisClientFactory('PUBLISHER');
 
 
 /**
+ *
  * Class created to allow for easier communication with the cache layer.
  * Following data are currently held in cache for every document:
  * - list of active users and number associated with how many editors have this client open
  * - the event stream
  *
  * @class Allows for easier redis usage
+ * @constructor
  *
  * @param {Object} clientData object containing following information: clientId and documentId
  */
@@ -57,6 +59,7 @@ module.exports = RedisAdapter;
 // implementation
 
 /**
+ *
  * Utility function used to streamline creation of redis client
  * @param {string} [clientLogName] name of the client
  * @return {RedisClient} raw library object
@@ -76,6 +79,7 @@ function redisClientFactory(clientLogName) {
 }
 
 /**
+ *
  * Init method of the RedisAdapter. Main functions:
  * - subscribe to document event stream
  * - set the event handlers
@@ -121,6 +125,7 @@ function unsubscribe() {
 }
 
 /**
+ *
  * Get list of ids of all clients that are currently editing this document
  *
  * @return {*|!Promise.<Array.<number>>|Promise} list of ids

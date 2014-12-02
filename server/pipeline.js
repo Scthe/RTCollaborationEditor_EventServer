@@ -3,18 +3,23 @@
 var RedisAdapter = require('./redis_adapter');
 
 /**
- * Ok, so You've like got a message, right ? The from-client type of message.
- * Pipe it down through several steps:
- * - validate the message
- * - enrich it ( assign id and do some other operations on it)
- * - publish to redis
  *
- * There is quite a lot of logic in here !
+ * Controller class. After receiving the message we want to pipe in through several steps ( hence the class name).
+ * For example when each new user joins to the document we have to communicate
+ * it to other document users and subscribe to the event queue.
+ *
+ * @class Adjust message flow
+ * @constructor
+ *
+ * @param {EventEmitter} app application object used for server-only event bus
+ * @param {object} clientData object containing following information: clientId and documentId
+ * @param {object} emitterCallbacks set of callbacks containing means to send various types of information to the client's editor: <i>operation</i>, <i>join</i>, <i>disconnect</i>
  */
 function Pipeline(app, clientData, emitterCallbacks) {
   // TODO check if client has r/w rights, return undefined if not
   /*jshint camelcase: false */
 
+  this.app = app;
   this.clientData = clientData;
   this.redisAdapter = new RedisAdapter(clientData, emitterCallbacks);
   this.emitterCallbacks = emitterCallbacks;
@@ -56,13 +61,19 @@ Pipeline.prototype = {
 
 module.exports = Pipeline;
 
-
-function onDisconnected(app) {
+/**
+ *
+ * Actions to take when the user lefts editor. For example we have to unsubscribe
+ * it from the event stream and publish the 'user left' message.
+ * It is worth noting that the sequence of actions is different when user closes
+ * his last editor tab and when there are still windows open to this very document.
+ */
+function onDisconnected() {
   /* jshint -W040 */ // binded to Pipeline prototype object
   /*jshint camelcase: false */
   var self = this,
       getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter),
-      removeUserNodeMessage = app.emit.bind(app, 'remove user', self.clientData);
+      removeUserNodeMessage = this.app.emit.bind(this.app, 'remove user', self.clientData);
 
   // remove client from document's client list
   // THEN get client count after changes
@@ -84,6 +95,16 @@ function onDisconnected(app) {
     .done();
 }
 
+/**
+ *
+ *  Invoked every time the client does something interesting
+ *  f.e. changes it's selection or inserts a letter. Some basics steps along the message pipeline:
+ * - validate if the message is correct
+ * - enrich it with id of the client that is responsible for the change
+ * - publish it to the event stream
+ *
+ * @param data message to propagate to other clients editing this document
+ */
 function onOperationMessage(data) {
   /* jshint -W040 */ // binded to Pipeline prototype object
 
@@ -98,6 +119,13 @@ function onOperationMessage(data) {
   // TODO might as well use node event system to propagate the message to db store
 }
 
+/**
+ *
+ * Invoked when we received notification about client action f.e. operation, joined/left status
+ *
+ * @param {string}[ch] not used
+ * @param {object} msg notification received, should have a field 'type'
+ */
 function onPropagatedMessage(ch, msg) {
   /* jshint unused:false */ // ch is not used
   /* jshint -W040 */ // binded to Pipeline prototype object
