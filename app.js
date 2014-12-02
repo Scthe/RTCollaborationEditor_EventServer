@@ -1,15 +1,32 @@
+/**
+ *
+ * Main script module.
+ * <p/>
+ * Responsibilities:
+ * <ul>
+ *   <li>Configure HTTP server</li>
+ *   <li>Set up the view engine</li>
+ *   <li>Create router</li>
+ *   <li>Register the socket handler</li>
+ *   <li>Handling the 404 errors</li>
+ * </ul>
+ *
+ * @module app
+ */
 'use strict';
 
 var express = require('express'),
     path = require('path'),
-//    favicon = require('serve-favicon'),
+    //    favicon = require('serve-favicon'),
     logger = require('morgan'),
     cookieParser = require('cookie-parser'),
     bodyParser = require('body-parser');
 
-var routes = require('./server/routes/index');
+/** main route to documents*/
+var docRoute = require('./server/routes/index');
+/** method used to register the socket handler*/
 var registerSocketHandler = require('./server/socket_handler');
-
+/** app instance, often used as EventEmitter object*/
 var app = express();
 
 // view engine setup
@@ -24,7 +41,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'app-test')));
 
-app.use('/', routes);
+app.use('/', docRoute);
 
 
 // configure socket server

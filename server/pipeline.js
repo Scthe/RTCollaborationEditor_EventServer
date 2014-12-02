@@ -130,7 +130,7 @@ Pipeline.prototype.onOperationMessage = function (data) {
 };
 
 /**
- * Invoked when we received notification about client action f.e. operation, joined/left status
+ * Invoked when we receive notification about client action f.e. operation, joined/left status
  *
  * @param {string}[ch] not used
  * @param {object} msg notification received, should have a field 'type'
