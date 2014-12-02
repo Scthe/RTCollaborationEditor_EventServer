@@ -91,8 +91,8 @@ module.exports = function (grunt) {
           'app.js',
 //          'app-test/{,*/}*.js',
           'bin/{,*/}*.js',
-          'server/{,*/}*.js'
-//          'utils/{,*/}*.js'
+          'server/{,*/}*.js',
+          'utils/{,*/}*.js'
         ]
       }
     }
