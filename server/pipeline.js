@@ -3,7 +3,8 @@
 'use strict';
 /* global config */
 
-var RedisAdapter = require('./redis_adapter');
+var RedisAdapter = require('./redis_adapter'),
+    _ = require('underscore');
 
 /**
  * ClientData
@@ -18,6 +19,29 @@ var RedisAdapter = require('./redis_adapter');
  * @property {function} join
  * @property {function} disconnect
  */
+
+/** List of allowed operations*/
+var operationNameWhitelist = [
+  'caret.register',
+  'caret.move',
+  'caret.selectionMove',
+  'caret.setPosition',
+  'caret.setSelection',
+
+  'insert',
+  'wrap',
+  'unwrap',
+  'bold',
+  'italic',
+  'underline',
+  'delete',
+  'heading',
+  'anchor',
+  'list',
+  'newLine',
+  'split'
+];
+
 
 /**
  * Controller class. After receiving the message we want to pipe in through several steps ( hence the class name).
@@ -125,15 +149,17 @@ Pipeline.prototype.onDisconnected = function () {
 Pipeline.prototype.onOperationMessage = function (data) {
   /* jshint -W040 */ // binded to Pipeline prototype object
 
-  // TODO validate
+  // validate
+  if (this.validateMessage(data)) {
 
-  // enrich
-  data.username = this.clientData.clientId;
+    // enrich
+    data.username = this.clientData.clientId;
 
-  // publish
-  var m = {type: 'msg', payload: data};
-  this.redisAdapter.publish(m);
+    // publish
+    var m = {type: 'msg', payload: data};
+    this.redisAdapter.publish(m);
 
+  }
   // TODO might as well use node event system to propagate the message to db store
 };
 
@@ -168,8 +194,7 @@ Pipeline.prototype.onPropagatedMessage = function (ch, msg) {
  */
 Pipeline.prototype.validateMessage = function (msg) {
   /* jshint -W040 */ // binded to Pipeline prototype object
-
-  return false;
+  return _(operationNameWhitelist).contains(msg.name);
 };
 
 module.exports = Pipeline;

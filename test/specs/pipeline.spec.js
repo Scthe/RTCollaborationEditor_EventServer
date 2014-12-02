@@ -316,7 +316,7 @@
         'split'
       ];
 
-      it('does not filter out correct event types', function () {
+      it('does not filter out correct operation names', function () {
         var p = new Pipeline(app, clientData);
 
         _(whitelist).each(function (opName) {
