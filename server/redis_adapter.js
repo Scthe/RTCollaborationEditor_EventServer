@@ -1,3 +1,5 @@
+/** @module server */
+
 'use strict';
 /*global config*/
 
@@ -28,45 +30,31 @@ var redisPublisher = redisClientFactory('PUBLISHER');
 
 
 /**
- * @module server/redis_adapter
- *
- * @exports {RedisAdapter} RedisAdapter class
- */
-
-/**
- *
- * Class created to allow for easier communication with the cache layer.
+ * Allows for easier communication with the cache layer.
  * Following data are currently held in cache for every document:
- * - list of active users and number associated with how many editors have this client open
- * - the event stream
+ * <ul>
+ * <li>list of active users and number associated with how many editors have this client open</li>
+ * <li>the event stream</li>
+ * </ul>
  *
- * @class RedisAdapter
+ * @param {ClientData} clientData object containing following information: clientId and documentId
  * @constructor
- *
- * @param {Object} clientData object containing following information: clientId and documentId
  */
 function RedisAdapter(clientData) {
+  /** id of current client*/
   this.clientId = clientData.clientId;
+  /** cache key to event stream*/
   this.documentPath = util.format(documentPathPattern, clientData.documentId);
+  /** cache key do document's user hash*/
   this.documentUsersPath = util.format(documentUsersPathPattern, clientData.documentId);
+  /** redis client */
   this.client = redisClientFactory();
 }
 
-RedisAdapter.prototype = {
-  init               : subscribe,
-  unsubscribe        : unsubscribe,
-  getUsersForDocument: getUsersForDocument,
-  publish            : publish
-};
-
-module.exports = RedisAdapter;
-
 
 /**
- *
  * Utility function used to streamline creation of redis client
  *
- * @method redisClientFactory
  * @param {string} [clientLogName] name of the client
  * @return {RedisClient} raw library object
  */
@@ -93,11 +81,10 @@ function redisClientFactory(clientLogName) {
  *
  * Whole flow is asynchronous !
  *
- * @method subscribe
  * @param {function(string,object)} messageHandler function invoked when the message is received
- * @return {!Promise.<number>|Promise} number of current editor instances that belong to this client
+ * @return {Promise.<number>} number of current editor instances that belong to this client
  */
-function subscribe(messageHandler) {
+RedisAdapter.prototype.init = function (messageHandler) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
 
   // there is no a particular need to separate setMessageHandler
@@ -112,7 +99,7 @@ function subscribe(messageHandler) {
       };
 
   return redisSubscribe(self.documentPath).then(setMessageHandler).then(addToClientList);
-}
+};
 
 /**
  *
@@ -120,26 +107,23 @@ function subscribe(messageHandler) {
  * - close subscription
  * - remove client from document's user list
  *
- * @method unsubscribe
- * @return {Promise.<number>|Promise} number of current editor instances that belong to this client
+ * @return {Promise.<number>} number of current editor instances that belong to this client
  */
-function unsubscribe() {
+RedisAdapter.prototype.unsubscribe = function () {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var self = this;
   self.client.quit();
 
   var redisRemClient = Q.nbind(redisPublisher.hincrby, redisPublisher);
   return redisRemClient(self.documentUsersPath, self.clientId, -1);
-}
+};
 
 /**
- *
  * Get list of ids of all clients that are currently editing this document
  *
- * @method getUsersForDocument
- * @return {*|Promise.<Array.<number>>|Promise} list of ids
+ * @return {Promise.<number[]>} list of ids
  */
-function getUsersForDocument() {
+RedisAdapter.prototype.getUsersForDocument = function () {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var f = Q.denodeify(redisPublisher.hgetall.bind(redisPublisher, this.documentUsersPath)),
       filterList = function (val) {
@@ -152,18 +136,18 @@ function getUsersForDocument() {
           .value();
       };
   return f().then(filterList);
-}
+};
 
 /**
- *
  * Publish the message to all clients editing current document
  *
- * @method publish
  * @param {object} msg message to publish
  * @return {Promise} Promise to allow chaining of the flow
  */
-function publish(msg) {
+RedisAdapter.prototype.publish = function (msg) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var redisPublish = Q.nbind(redisPublisher.publish, redisPublisher);
   return redisPublish(this.documentPath, JSON.stringify(msg));
-}
+};
+
+module.exports = RedisAdapter;

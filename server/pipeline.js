@@ -1,13 +1,15 @@
+/** @module server */
+
 'use strict';
 
 var RedisAdapter = require('./redis_adapter');
 
 /**
- * @module server/pipeline
- *
- * @exports {Pipeline} Pipeline class
+ * ClientData
+ * @typedef {Object} ClientData
+ * @property {String} documentId
+ * @property {Number} clientId
  */
-
 
 /**
  *
@@ -15,11 +17,10 @@ var RedisAdapter = require('./redis_adapter');
  * For example when each new user joins to the document we have to communicate
  * it to other document users and subscribe to the event queue.
  *
- * @class Pipeline
  * @constructor
  *
  * @param {EventEmitter} app application object used for server-only event bus
- * @param {object} clientData object containing following information: clientId and documentId
+ * @param {ClientData} clientData object containing following information: clientId and documentId
  * @param {object} emitterCallbacks set of callbacks containing means to send various types of information to the client's editor: <i>operation</i>, <i>join</i>, <i>disconnect</i>
  */
 function Pipeline(app, clientData, emitterCallbacks) {

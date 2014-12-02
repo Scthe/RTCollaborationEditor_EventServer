@@ -1,3 +1,5 @@
+/** @module server */
+
 'use strict';
 /* global config */
 
@@ -6,13 +8,6 @@ var http = require('http'),
     socketioJwt = require('socketio-jwt'),
     _ = require('underscore'),
     MsgPipeline = require('./pipeline');
-
-/**
- * @module server/server_handler
- *
- * @exports {function(EventEmitter):Server} factory function to create socket server
- */
-
 
 module.exports = startSocketServer;
 
