@@ -43,7 +43,7 @@ module.exports = {
   /**
    * console log level, one of: 'debug','verbose','info', 'warn', 'error'
    */
-  'logLevel': 'info',
+  'logLevel': 'debug',
 
   'profiles': {
 

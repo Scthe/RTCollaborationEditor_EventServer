@@ -18,13 +18,12 @@ var redisPublisher = redisClientFactory('PUBLISHER');
 (function () {
   var monitor = redisClientFactory('MONITOR');
   monitor.monitor(function () {
-    console.info('Entering monitoring mode.');
+    log.info('Entering monitoring mode.');
   });
   monitor.on('monitor', function (time, args) {
     var d = new Date(0);
     d.setUTCSeconds(time);
-    console.redis(
-      util.format('[REDIS] %d:%d:%d $%s', d.getHours(), d.getMinutes(), d.getSeconds(), args.join(' ')));
+    log.redis(args.join(' '));
   });
 })();
 
@@ -66,7 +65,7 @@ function redisClientFactory(clientLogName) {
   }
 
   client.on('ready', function () {
-    console.debug(util.format('redis client -%s- ready', clientLogName));
+    log.debug(util.format('redis client -%s- ready', clientLogName));
   });
 
   return client;
@@ -127,7 +126,6 @@ RedisAdapter.prototype.getUsersForDocument = function () {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var f = Q.denodeify(redisPublisher.hgetall.bind(redisPublisher, this.documentUsersPath)),
       filterList = function (val) {
-//        console.log(val);
         return _.chain(val)
           .keys()
           .filter(function (e) {

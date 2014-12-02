@@ -13,7 +13,7 @@
 
 'use strict';
 /* exported server */
-/* global config */
+/* global config, log */
 
 var debug = require('debug')('sublimeDocs-SocketServer');
 
@@ -30,7 +30,7 @@ if (!config.socketOnly) {
   var server = app.listen(config.appPort, function () {
     var msg = 'Express server listening on port: ' + server.address().port;
     debug(msg);
-    console.log(msg);
+    log.info(msg);
   });
 } else {
   // TODO only the 'app' variable differs between branches, merge this !
@@ -41,7 +41,7 @@ if (!config.socketOnly) {
 
   var msg = 'Socket server listening on port: ' + config.socketPort;
   debug(msg);
-  console.log(msg);
+  log.info(msg);
 }
 
 // add node event handler

@@ -20,7 +20,7 @@ module.exports = function (app) {
  * @returns *
  */
 function onNewUser(data) {
-  console.info(util.format('[system event] new user: %s', data.clientId));
+  log.info(util.format('new user: %s', data.clientId));
 }
 
 /**
@@ -32,5 +32,5 @@ function onNewUser(data) {
  * @returns *
  */
 function onRemoveUser(data) {
-  console.info(util.format('[system event] remove user: %s', data.clientId));
+  log.info(util.format('remove user: %s', data.clientId));
 }
