@@ -20,40 +20,40 @@ $(document).ready(function () {
   // listen on message_return channel
   socket.on('operation', function (data) {
     console.log(data);
-    remoteInterface.on_operation(data);
+    remoteInterface.onOperation(data);
   });
 
   socket.on('selection', function (data) {
 //    console.log(data);
-    remoteInterface.on_selection(data);
+    remoteInterface.onSelection(data);
   });
 
   socket.on('reconnect', function (data) {
 //    console.log('reconnect', data);
-    remoteInterface.on_reconnect(data);
+    remoteInterface.onReconnect(data);
   });
 
   socket.on('client_left', function (data) {
 //    console.log('client_left', data);
-    remoteInterface.on_client_left(data);
+    remoteInterface.onClientLeft(data);
   });
 
-  function send_operation(msg) {
+  function sendOperation(msg) {
     socket.emit('operation', {data: msg });
     // TODO can show message now, but should check to not display own message twice
   }
 
-  function send_selection(msg) {
+  function sendSelection(msg) {
     socket.emit('selection', {data: msg });
   }
 
   remoteInterface = {
-    send_operation: send_operation,
-    send_selection: send_selection,
-    on_operation  : voidFunction,
-    on_selection  : voidFunction,
-    on_reconnect  : voidFunction,
-    on_client_left: voidFunction
+    sendOperation: sendOperation,
+    sendSelection: sendSelection,
+    onOperation  : voidFunction,
+    onSelection  : voidFunction,
+    onReconnect  : voidFunction,
+    onClientLeft: voidFunction
   };
 
   function voidFunction() {

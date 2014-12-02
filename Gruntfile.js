@@ -45,7 +45,7 @@ module.exports = function (grunt) {
         tasks  : ['mochaTest:specs']
       }
     },
-    mocha_casperjs: {
+    'mocha_casperjs': {
       options: {
         ui               : 'bdd',
         reporter         : 'list',
