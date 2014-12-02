@@ -218,6 +218,34 @@
         expect(publisher.hgetall).called;
         expect(publisher.hgetall).calledWith(adapter.documentUsersPath);
       });
+
+      it('filters inactive users', function () {
+        var f = sinon.mock(),
+            m = {};
+        for (var i = -3; i < 5; i++) {
+          m[faker.internet.password()] = i;
+        }
+
+        f.onFirstCall().returns(m);
+        var publisher = {hgetall: f},
+            RedisAdapter = requireRedisAdapter(publisher, undefined, undefined);
+        adapter = new RedisAdapter(clientData, voidFunction, voidFunction);
+        adapter.init();
+
+        var users = adapter.getUsersForDocument().val;
+        var a = 1;
+        _.chain(m)
+          .keys()
+          .each(function (e) {
+            a += 1;
+            if (m[e] > 0) {
+              expect(users).to.contain(e);
+            } else {
+              expect(users).to.not.contain(e);
+            }
+          })
+          .value();
+      });
     });
 
 

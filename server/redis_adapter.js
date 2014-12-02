@@ -27,6 +27,16 @@ var redisPublisher = redisClientFactory('PUBLISHER');
 })();
 
 
+/**
+ * Class created to allow for easier communication with the cache layer.
+ * Following data are currently held in cache for every document:
+ * - list of active users and number associated with how many editors have this client open
+ * - the event stream
+ *
+ * @class Allows for easier redis usage
+ *
+ * @param {Object} clientData object containing following information: clientId and documentId
+ */
 function RedisAdapter(clientData) {
   this.clientId = clientData.clientId;
   this.documentPath = util.format(documentPathPattern, clientData.documentId);
@@ -46,10 +56,18 @@ module.exports = RedisAdapter;
 //
 // implementation
 
-function redisClientFactory() {
+/**
+ * Utility function used to streamline creation of redis client
+ * @param {string} [clientLogName] name of the client
+ * @return {RedisClient} raw library object
+ */
+function redisClientFactory(clientLogName) {
   var client = redis.createClient(config.redisPort, config.redisHost);
 
-  var clientLogName = arguments.length > 0 ? arguments[0] : 'from socket';
+  if (clientLogName === undefined) {
+    clientLogName = 'from socket';
+  }
+
   client.on('ready', function () {
     console.debug(util.format('redis client -%s- ready', clientLogName));
   });
@@ -57,6 +75,17 @@ function redisClientFactory() {
   return client;
 }
 
+/**
+ * Init method of the RedisAdapter. Main functions:
+ * - subscribe to document event stream
+ * - set the event handlers
+ * - add user to document's user list
+ *
+ * Whole flow is asynchronous !
+ *
+ * @param {function(string,object)} messageHandler function invoked when the message is received
+ * @return {!Promise.<number>|Promise} number of current editor instances that belong to this client
+ */
 function subscribe(messageHandler) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
 
@@ -74,19 +103,33 @@ function subscribe(messageHandler) {
   return redisSubscribe(self.documentPath).then(setMessageHandler).then(addToClientList);
 }
 
+/**
+ *
+ * Method to close this event stream subscription. Main functions:
+ * - close subscription
+ * - remove client from document's user list
+ *
+ * @return {!Promise.<number>|Promise} number of current editor instances that belong to this client
+ */
 function unsubscribe() {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var self = this;
   self.client.quit();
 
-  var redisAddClient = Q.nbind(redisPublisher.hincrby, redisPublisher);
-  return redisAddClient(self.documentUsersPath, self.clientId, -1);
+  var redisRemClient = Q.nbind(redisPublisher.hincrby, redisPublisher);
+  return redisRemClient(self.documentUsersPath, self.clientId, -1);
 }
 
+/**
+ * Get list of ids of all clients that are currently editing this document
+ *
+ * @return {*|!Promise.<Array.<number>>|Promise} list of ids
+ */
 function getUsersForDocument() {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var f = Q.denodeify(redisPublisher.hgetall.bind(redisPublisher, this.documentUsersPath)),
       filterList = function (val) {
+//        console.log(val);
         return _.chain(val)
           .keys()
           .filter(function (e) {
@@ -97,6 +140,13 @@ function getUsersForDocument() {
   return f().then(filterList);
 }
 
+/**
+ *
+ * Publish the message to all clients editing current document
+ *
+ * @param {object} msg message to publish
+ * @return {Promise} Promise to allow chaining of the flow
+ */
 function publish(msg) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
   var redisPublish = Q.nbind(redisPublisher.publish, redisPublisher);
