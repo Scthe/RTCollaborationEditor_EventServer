@@ -6,12 +6,12 @@ var express = require('express'),
     jwt = require('jsonwebtoken');
 
 /**
- * @module server/routes/index
  *
  * GET home page
  *
  * Express route handler. Used only in testing environment.
  *
+ * @module server/routes/index
  * @exports {Express.Router} route handler
  */
 

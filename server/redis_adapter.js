@@ -121,7 +121,7 @@ function subscribe(messageHandler) {
  * - remove client from document's user list
  *
  * @method unsubscribe
- * @return {!Promise.<number>|Promise} number of current editor instances that belong to this client
+ * @return {Promise.<number>|Promise} number of current editor instances that belong to this client
  */
 function unsubscribe() {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
@@ -137,7 +137,7 @@ function unsubscribe() {
  * Get list of ids of all clients that are currently editing this document
  *
  * @method getUsersForDocument
- * @return {*|!Promise.<Array.<number>>|Promise} list of ids
+ * @return {*|Promise.<Array.<number>>|Promise} list of ids
  */
 function getUsersForDocument() {
   /* jshint -W040 */ // binded to RedisAdapter prototype object

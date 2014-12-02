@@ -88,11 +88,11 @@ module.exports = function (grunt) {
       generate: {
         dest: 'doc',
         src : [
-          'app.js',
-          'app-test/{,*/}*.js',
-          'bin/{,*/}*.js',
-          'server/{,*/}*.js',
-          'utils/{,*/}*.js'
+//          'app.js',
+//          'app-test/{,*/}*.js',
+//          'bin/{,*/}*.js',
+          'server/{,*/}*.js'
+//          'utils/{,*/}*.js'
         ]
       }
     }
