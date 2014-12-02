@@ -1,5 +1,5 @@
 'use strict';
-/* global io */
+/* global io, $ */
 
 var remoteInterface;
 

@@ -1,5 +1,5 @@
 'use strict';
-/* global remoteInterface, CodeMirror*/
+/* global remoteInterface, CodeMirror, $ */
 
 var editor;
 
@@ -13,7 +13,7 @@ $(document).ready(function () {
   value += '// The implementation of joinLines\n';
 
   try {
-    editor = CodeMirror(document.getElementById('editor-div'), {
+    editor = new CodeMirror(document.getElementById('editor-div'), {
       value                  : value,
       lineNumbers            : true,
       autoCloseBrackets      : true,
@@ -66,11 +66,13 @@ $(document).ready(function () {
 
   remoteInterface.onReconnect = function (data) {
     console.log(data);
+    /*jshint camelcase: false */
     $('#user_count').text(data.user_count);
   };
 
   remoteInterface.onClientLeft = function (data) {
 //    console.log(data);
+    /*jshint camelcase: false */
     $('#user_count').text(data.user_count);
   };
 
