@@ -12,21 +12,31 @@ $(document).ready(function () {
   value += '\n';
   value += '// The implementation of joinLines\n';
 
-  editor = CodeMirror(document.getElementById('editor'), {
-    value                  : value,
-    lineNumbers            : true,
-    autoCloseBrackets      : true,
-    matchBrackets          : true,
-    showCursorWhenSelecting: true,
-    indentUnit             : 2,
-    smartIndent            : false,
-    tabSize                : 2,
-    lineWrapping           : false,
-    undoDepth              : 5,
-    historyEventDelay      : 350,
-    dragDrop               : false
-  });
+  try {
+    editor = CodeMirror(document.getElementById('editor-div'), {
+      value                  : value,
+      lineNumbers            : true,
+      autoCloseBrackets      : true,
+      matchBrackets          : true,
+      showCursorWhenSelecting: true,
+      indentUnit             : 2,
+      smartIndent            : false,
+      tabSize                : 2,
+      lineWrapping           : false,
+      undoDepth              : 5,
+      historyEventDelay      : 350,
+      dragDrop               : false
+    });
+  } catch (e) {
+    console.log(e.stack);
+  }
   //endregion
+
+  // bind input for easier debugging
+  var input = editor.display.input;
+  input.id = 'texteditor-input';
+  document.getElementById('debug-textarea').appendChild(input);
+
 
   // region set handlers
 

@@ -41,6 +41,11 @@ module.exports = {
     'sock': {
       'socket_only': true
     }
-  }
+  },
+
+  /**
+   * Hidden in plain sight !
+   */
+  'secret_key': 'abcde'
 
 };

@@ -2,19 +2,19 @@
 /*global config*/
 
 var redis = require('redis'),
-    _ = require('underscore'),
     util = require('util'),
+    _ = require('underscore'),
     Q = require('q');
 
 var documentPathPattern = 'document/%s',
     documentUsersPathPattern = 'document/%s/user_list';
 
 // separate publisher needed since can't publish in subscribe mode
-var redisPublisher = defaultRedisClient('PUBLISHER');
+var redisPublisher = redisClientFactory('PUBLISHER');
 
 // create redis monitor to log all operations
 (function () {
-  var monitor = defaultRedisClient('MONITOR');
+  var monitor = redisClientFactory('MONITOR');
   monitor.monitor(function () {
     console.info('Entering monitoring mode.');
   });
@@ -24,67 +24,29 @@ var redisPublisher = defaultRedisClient('PUBLISHER');
     console.redis(
       util.format('[REDIS] %d:%d:%d $%s', d.getHours(), d.getMinutes(), d.getSeconds(), args.join(' ')));
   });
-  return monitor;
 })();
 
 
-function RedisAdapter(clientData, msgCallbacks) {
-  var that = this;
-  this.clientData = clientData;
+function RedisAdapter(clientData) {
+  this.clientId = clientData.clientId;
   this.documentPath = util.format(documentPathPattern, clientData.documentId);
   this.documentUsersPath = util.format(documentUsersPathPattern, clientData.documentId);
-  this._messageHandler = _.partial(_messageHandlerProto, msgCallbacks);
-  this.client = defaultRedisClient();
-
-  // subscribe client to chat room events
-  // THEN set the message callback AND add client to the chat room list ( sadd := set add)
-  // THEN get client count after changes
-  // THEN publish 'client connected' event to queue
-  var redisSubscribe = Q.nbind(this.client.subscribe, this.client);
-
-  redisSubscribe(this.documentPath)
-    .then(function () {
-      that.client.on('message', that._messageHandler);
-
-      var redisAddClient = Q.nbind(redisPublisher.sadd, redisPublisher);
-      return redisAddClient(that.documentUsersPath, clientData.clientId);
-    })
-    .then(that._getUserCount.bind(that))
-    .then(publishUserJoin.bind(that, that.clientData))
-    .catch(console.printStackTrace)
-    .done();
+  this.client = redisClientFactory();
 }
 
 RedisAdapter.prototype = {
-  unsubscribe     : unsubscribe,
-  publishOperation: publishMessage,
-  publishSelection: publishSelection,
-  _getUserCount   : function () {
-    return Q.denodeify(redisPublisher.scard.bind(redisPublisher, this.documentUsersPath))();
-  }
+  init               : subscribe,
+  unsubscribe        : unsubscribe,
+  getUsersForDocument: getUsersForDocument,
+  publish            : publish
 };
 
 module.exports = RedisAdapter;
 
+//
+// implementation
 
-function _messageHandlerProto(msgCallbacks, ch, msg) {
-  /* jshint unused:false */ // ch is not used
-  var m = JSON.parse(msg);
-  var data = m.payload;
-
-  // TODO remove msg.type if, make it const time
-  if (m.type === 'msg') {
-    msgCallbacks.operation(data);
-  } else if (m.type === 'sel') {
-    msgCallbacks.selection(data);
-  } else if (m.type === 'join') {
-    msgCallbacks.join(data);
-  } else { // disconnect
-    msgCallbacks.disconnect(data);
-  }
-}
-
-function defaultRedisClient() {
+function redisClientFactory() {
   var client = redis.createClient(config.redis_port, config.redis_host);
 
   var clientLogName = arguments.length > 0 ? arguments[0] : 'from socket';
@@ -95,52 +57,48 @@ function defaultRedisClient() {
   return client;
 }
 
+function subscribe(messageHandler) {
+  /* jshint -W040 */ // binded to RedisAdapter prototype object
+
+  // there is no a particular need to separate setMessageHandler
+  // and addToClientList. Although it makes for a nicer sentence
+  // on invocation.
+  var self = this,
+      redisSubscribe = Q.nbind(this.client.subscribe, this.client),
+      setMessageHandler = self.client.on.bind(self.client, 'message', messageHandler),
+      addToClientList = function () {
+        var redisAddClient = Q.nbind(redisPublisher.hincrby, redisPublisher);
+        return redisAddClient(self.documentUsersPath, self.clientId, 1);
+      };
+
+  return redisSubscribe(self.documentPath).then(setMessageHandler).then(addToClientList);
+}
+
 function unsubscribe() {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var that = this;
-  that.client.quit();
+  var self = this;
+  self.client.quit();
 
-  // remove client from list of client for this chat room ( srem := set remove)
-  // THEN get client count after changes
-  // THEN publish 'client disconnected' event to queue
-  var redisRemoveClient = Q.nbind(redisPublisher.srem, redisPublisher);
-
-  redisRemoveClient(that.documentUsersPath, that.clientData.clientId)
-    .then(that._getUserCount.bind(that))
-    .then(publishUserLeft.bind(that, that.clientData))
-    .catch(console.printStackTrace)
-    .done();
+  var redisAddClient = Q.nbind(redisPublisher.hincrby, redisPublisher);
+  return redisAddClient(self.documentUsersPath, self.clientId, -1);
 }
 
-function publishMessage(msg) {
+function getUsersForDocument() {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var m = {type: 'msg', payload: msg};
-  redisPublisher.publish(this.documentPath, JSON.stringify(m));
+  var f = Q.denodeify(redisPublisher.hgetall.bind(redisPublisher, this.documentUsersPath)),
+      filterList = function (val) {
+        return _.chain(val)
+          .keys()
+          .filter(function (e) {
+            return val[e] > 0;
+          })
+          .value();
+      };
+  return f().then(filterList);
 }
 
-function publishSelection(msg) {
+function publish(msg) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var m = {type: 'sel', payload: msg};
-  redisPublisher.publish(this.documentPath, JSON.stringify(m));
-}
-
-function publishUserJoin(clientData, count) {
-  /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var m = {
-    type   : 'join',
-    payload: { client: clientData.clientId, user_count: count }
-  };
   var redisPublish = Q.nbind(redisPublisher.publish, redisPublisher);
-  return redisPublish(this.documentPath, JSON.stringify(m));
+  return redisPublish(this.documentPath, JSON.stringify(msg));
 }
-
-function publishUserLeft(clientData, count) {
-  /* jshint -W040 */ // binded to RedisAdapter prototype object
-  var m = {
-    type   : 'left',
-    payload: { client: clientData.clientId, user_count: count }
-  };
-  var redisPublish = Q.nbind(redisPublisher.publish, redisPublisher);
-  return redisPublish(this.documentPath, JSON.stringify(m));
-}
-

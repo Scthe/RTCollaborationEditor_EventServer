@@ -1,18 +1,23 @@
 'use strict';
+/*global config*/
 
-var express = require('express');
-var router = express.Router();
+var express = require('express'),
+    router = express.Router(),
+    jwt = require('jsonwebtoken');
 
 
 /* GET home page. */
-router.get('/', function(req, res) {
+router.get('/:id', function (req, res) {
   /* jshint unused:false */ // req is not used
-  // TODO read client_id from cookie
-  // TODO store the ( client_id, room_id, auth_token)
-  // TODO render the page with the token or set is as cache
-  // TODO client sends us the token back on socket handshake
-  // TODO make token one time use
-  res.render('index');
+  var data = {
+    documentId: req.params.id,
+    clientId  : Date.now() % 1000 // this can be read from cookie
+//    clientId  : 15
+  };
+
+  var token = jwt.sign(data, config.secret_key, { expiresInMinutes: 60 * 5 });
+
+  res.render('index', { token: token});
 });
 
 module.exports = router;

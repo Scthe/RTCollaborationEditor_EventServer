@@ -1,16 +1,20 @@
 /*jslint indent: 2 */
 /*jshint expr: true*/
-/* global describe, it, beforeEach, expect, require, sinon, afterEach, faker */
+/* global describe, it, beforeEach, expect, require, sinon, afterEach, faker, config */
 
 (function () {
   'use strict';
 
   var proxyquire = require('proxyquire').noCallThru(),
       io = require('socket.io-client'),
+      jwt = require('jsonwebtoken'),
       SOCKET_PORT = 8082,
       SOCKET_HOST = 'localhost';
 
-  GLOBAL.config = {socket_port: SOCKET_PORT};
+  GLOBAL.config = {
+    socket_port: SOCKET_PORT,
+    secret_key : 'test_key'
+  };
 
   var pipelineForwardedCalls;
 
@@ -18,7 +22,8 @@
 
     var server, // normal host&port server as underlying for socket connection receiver
         app,// node application state f.e some messages are published on this object
-        socket;// client socket
+        socket,// client socket
+        clientData;
 
     beforeEach(function () {
       // constructor like function
@@ -35,8 +40,13 @@
       // start socket server
       server = registerSocketHandler(app, SOCKET_PORT);
 
-      // client socket
-      socket = io.connect('http://' + SOCKET_HOST + ':' + SOCKET_PORT, { forceNew: true });
+      // data for client auth step
+      clientData = {
+        documentId: faker.internet.password(),
+        clientId  : faker.random.number()
+      };
+
+      // either test creates socket on it's own or relies of it_ to do it
     });
 
     beforeEach(function () {
@@ -54,16 +64,41 @@
     });
 
     it('connects', function (done) {
+      var token = jwt.sign(clientData, config.secret_key);
+      // client socket
+      socket = io.connect('http://' + SOCKET_HOST + ':' + SOCKET_PORT, {
+        forceNew: true,
+        query   : 'token=' + token
+      });
+
       socket.on('connect', function () {
         done();
+      });
+    });
+
+    it('should never let connect with incorrect token', function (done) {
+      var token = jwt.sign(clientData, config.secret_key) + '~';
+      // client socket
+      socket = io.connect('http://' + SOCKET_HOST + ':' + SOCKET_PORT, {
+        forceNew: true,
+        query   : 'token=' + token
+      });
+
+      var EXPECTED_TIMEOUT = 100;
+      this.timeout(EXPECTED_TIMEOUT + 100);
+      var timeout = setTimeout(done, EXPECTED_TIMEOUT);
+      socket.on('connect', function () {
+        clearTimeout(timeout);
+        // expected behavior: this should never happen
+        done(new Error('Unexpected call'));
       });
     });
 
     describe('#connected', function () {
 
       it_('creates pipeline for message processing', function (done) {
-        expect(PipelineProxy.prototype.lastInstance).to.exist;
         var pipeline = PipelineProxy.prototype.lastInstance;
+        expect(pipeline).to.exist;
         expect(pipeline.constructor).calledOnce;
         expect(pipeline.constructor).calledWithExactly(
           app,
@@ -73,7 +108,25 @@
         done();
       });
 
-      // TODO add tests for reading proper client data
+      it('reads provided client data', function (done) {
+        var token = jwt.sign(clientData, config.secret_key);
+        // client socket
+        socket = io.connect('http://' + SOCKET_HOST + ':' + SOCKET_PORT, {
+          forceNew: true,
+          query   : 'token=' + token
+        });
+
+        socket.on('connect', function () {
+          var pipeline = PipelineProxy.prototype.lastInstance;
+          expect(pipeline).to.exist;
+          expect(pipeline.clientData).to.exist;
+          expect(pipeline.clientData.documentId).to.be.equal(clientData.documentId);
+          expect(pipeline.clientData.clientId).to.be.equal(clientData.clientId);
+
+          done();
+        });
+      });
+
 
     });
 
@@ -97,15 +150,7 @@
         socket.emit('operation', msgTmpl);
       });
 
-      it_('#emit_selection', function (done) {
-        pipelineForwardedCalls._onSelectionMessage = function (data) {
-          expect(data).to.deep.equal(msgTmpl);
-          done();
-        };
-        socket.emit('selection', msgTmpl);
-      });
-
-      /* TODO #disconnect test
+      /* TODO #disconnect test, use not reconnect client flag ?
        it('#disconnect', function (done) {
        socket.on('connect', function () {
        pipelineForwardedCalls._onDisconnected = function (data) {
@@ -132,7 +177,6 @@
 
       var tests = [
         ['#emit_operation', 'operation', 'operation'],
-        ['#emit_selection', 'selection', 'selection'],
         ['#emit_reconnect', 'reconnect', 'join'],
         ['#emit_client_left', 'client_left', 'disconnect']
       ];
@@ -162,6 +206,13 @@
 
     function it_(name, f) {
       it(name, function (done) {
+        var token = jwt.sign(clientData, config.secret_key);
+        // client socket
+        socket = io.connect('http://' + SOCKET_HOST + ':' + SOCKET_PORT, {
+          forceNew: true,
+          query   : 'token=' + token
+        });
+
         socket.on('connect', function () {
           f(done);
         });

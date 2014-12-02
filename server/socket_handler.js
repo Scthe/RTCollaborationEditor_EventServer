@@ -3,6 +3,7 @@
 
 var http = require('http'),
     socketIO = require('socket.io'),
+    socketioJwt = require('socketio-jwt'),
     _ = require('underscore'),
     MsgPipeline = require('./pipeline');
 
@@ -17,6 +18,11 @@ module.exports = function (app) {
     io = socketIO.listen(server);
   }
 
+  io.set('authorization', socketioJwt.authorize({
+    secret   : config.secret_key,
+    handshake: true
+  }));
+
   // create handler for socket connections
   io.sockets.on('connection', _.partial(onNewConnection, app));
 
@@ -25,26 +31,28 @@ module.exports = function (app) {
 };
 
 function onNewConnection(app, socket) {
+  var data = socket.client.request.decoded_token;
+  // NOTE: if the provided auth token is not ok
+  // the execution does not reach this point
+
   // read client data
   var clientData = {
-    clientId: Date.now() % 1000,   // TODO read from socket handshake
-    documentId: 'aaa'                // TODO read from socket handshake
+    clientId  : data.clientId,
+    documentId: data.documentId
   };
+//  console.log(clientData, 'connected');
 
   // server to client sending channel
   var emitterCallbacks = {
     operation : socket.emit.bind(socket, 'operation'),
-    selection : socket.emit.bind(socket, 'selection'),
     join      : socket.emit.bind(socket, 'reconnect'),
     disconnect: socket.emit.bind(socket, 'client_left')
   };
 
   // create logic module
-  clientData.msgPipeline = new MsgPipeline(app, clientData, emitterCallbacks);
-  var pipe = clientData.msgPipeline;
+  var pipe = new MsgPipeline(app, clientData, emitterCallbacks);
 
   // socket callbacks - whatever happened forward it to pipeline ( logic module)
   socket.on('disconnect', pipe.onDisconnected.bind(pipe, app));
   socket.on('operation', pipe.onOperationMessage.bind(pipe));
-  socket.on('selection', pipe.onSelectionMessage.bind(pipe));
 }
