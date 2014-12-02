@@ -1,5 +1,4 @@
 /**
- *
  * Main script module.
  * <p/>
  * Responsibilities:

@@ -90,7 +90,7 @@ module.exports = function (grunt) {
         src : [
           'app.js',
 //          'app-test/{,*/}*.js',
-//          'bin/{,*/}*.js',
+          'bin/{,*/}*.js',
           'server/{,*/}*.js'
 //          'utils/{,*/}*.js'
         ]

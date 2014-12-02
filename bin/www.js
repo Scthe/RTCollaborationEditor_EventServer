@@ -1,12 +1,26 @@
-#!/usr/bin/env node
+/**
+ * Start point of the application
+ * <p/>
+ * Responsibilities:
+ * <ul>
+ *   <li>Set the configuration</li>
+ *   <li>Start the logging system</li>
+ *   <li>Start server based on provided configuration</li>
+ * </ul>
+ *
+ * @module bin/www
+ */
 
 'use strict';
 /* exported server */
 /* global config */
 
-// setup
-var debug = require('debug')('chat2');
+var debug = require('debug')('sublimeDocs-SocketServer');
+
+// read the configuration
 GLOBAL.config = require('../utils/config_loader');
+
+// start logs
 require('../utils/log_utils')();
 
 var app;
@@ -19,15 +33,15 @@ if (!config.socketOnly) {
     console.log(msg);
   });
 } else {
+  // TODO only the 'app' variable differs between branches, merge this !
   var events = require('events');
   app = new events.EventEmitter();
-  var socketHandler = require('../server/socket_handler'); // TODO only app variable differs between branches, merge this !
+  var socketHandler = require('../server/socket_handler');
   socketHandler(app);
 
   var msg = 'Socket server listening on port: ' + config.socketPort;
   debug(msg);
   console.log(msg);
-
 }
 
 // add node event handler
