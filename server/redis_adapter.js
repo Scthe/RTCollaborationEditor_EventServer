@@ -1,4 +1,4 @@
-/** @module server */
+/** @module server/redis_adapter */
 
 'use strict';
 /*global config*/
@@ -56,7 +56,7 @@ function RedisAdapter(clientData) {
  * Utility function used to streamline creation of redis client
  *
  * @param {string} [clientLogName] name of the client
- * @return {RedisClient} raw library object
+ * @returns {RedisClient} raw library object
  */
 function redisClientFactory(clientLogName) {
   var client = redis.createClient(config.redisPort, config.redisHost);
@@ -82,7 +82,7 @@ function redisClientFactory(clientLogName) {
  * Whole flow is asynchronous !
  *
  * @param {function(string,object)} messageHandler function invoked when the message is received
- * @return {Promise.<number>} number of current editor instances that belong to this client
+ * @returns {Promise.<number>} number of current editor instances that belong to this client
  */
 RedisAdapter.prototype.init = function (messageHandler) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
@@ -107,7 +107,7 @@ RedisAdapter.prototype.init = function (messageHandler) {
  * - close subscription
  * - remove client from document's user list
  *
- * @return {Promise.<number>} number of current editor instances that belong to this client
+ * @returns {Promise.<number>} number of current editor instances that belong to this client
  */
 RedisAdapter.prototype.unsubscribe = function () {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
@@ -121,7 +121,7 @@ RedisAdapter.prototype.unsubscribe = function () {
 /**
  * Get list of ids of all clients that are currently editing this document
  *
- * @return {Promise.<number[]>} list of ids
+ * @returns {Promise.<number[]>} list of ids
  */
 RedisAdapter.prototype.getUsersForDocument = function () {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
@@ -142,7 +142,7 @@ RedisAdapter.prototype.getUsersForDocument = function () {
  * Publish the message to all clients editing current document
  *
  * @param {object} msg message to publish
- * @return {Promise} Promise to allow chaining of the flow
+ * @returns {Promise} Promise to allow chaining of the flow
  */
 RedisAdapter.prototype.publish = function (msg) {
   /* jshint -W040 */ // binded to RedisAdapter prototype object
