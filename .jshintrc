@@ -18,5 +18,6 @@
   "trailing": true,
   "smarttabs": true,
   "white": true,
-  "browser": true
+  "browser": true,
+  "latedef" : false
 }
