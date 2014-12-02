@@ -97,7 +97,7 @@ function Pipeline(app, clientData, emitterCallbacks) {
         app.emit('new user', self.clientData);
       }
     })
-    .catch(console.printStackTrace)
+    .catch(log.printStackTrace)
     .done();
 }
 
@@ -132,7 +132,7 @@ Pipeline.prototype.onDisconnected = function () {
         })
         .then(removeUserNodeMessage);
     })
-    .catch(console.printStackTrace)
+    .catch(log.printStackTrace)
     .done();
 };
 

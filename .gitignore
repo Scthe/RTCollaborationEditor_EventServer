@@ -2,3 +2,5 @@
 .idea
 doc
 node_modules
+
+*.log

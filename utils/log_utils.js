@@ -17,33 +17,77 @@
  */
 'use strict';
 
-// TODO configure morgan ?
+var winston = require('winston'),
+    util = require('util');
 
-var chalk = require('chalk');
+var myCustomLevels = {
+  levels: {
+    debug  : 0,
+    redis  : 0,
+    verbose: 1,
+    info   : 2,
+    warn   : 3,
+    error  : 3
+  },
+  colors: {
+    debug  : 'green',
+    redis  : 'magenta',
+    verbose: 'white',
+    info   : 'blue',
+    warn   : 'yellow',
+    error  : 'red'
+  }
+};
 
-module.exports = function () {
+winston.addColors(myCustomLevels.colors);
 
-  var ce = console.error;
-  var ci = console.info;
-  var cl = console.log;
-  var cw = console.warn;
+module.exports = function (logFilePath, logLevel) {
+  if (!logLevel) {
+    logLevel = 'info';
+  }
+//  logLevel = 'debug';
 
-  console.error = function (e) {
-    ce(chalk.bold.red(e));
+  var logger = new (winston.Logger)({
+    levels    : myCustomLevels.levels,
+    transports: [
+      new (winston.transports.Console)({
+          level    : logLevel,
+          colorize : 'true',
+          timestamp: function () {
+            var d = new Date();
+            return util.format('%d:%d:%d.%d', d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds());
+          }
+        }
+      )]
+  });
+  if (logFilePath) {
+    logger.add(winston.transports.File, {
+        filename        : logFilePath,
+        handleExceptions: true,
+        level           : 'debug'
+      }
+    );
+  }
+
+  logger.printStackTrace = function (err) {
+    logger.error(err.stack);
   };
-  console.info = function (e) {
-    ci(chalk.blue(e));
-  };
-  console.debug = function (e) {
-    cl(chalk.green(e));
-  };
-  console.warn = function (e) {
-    cw(chalk.yellow(e));
-  };
-  console.redis = function (e) {
-    cl(chalk.bold.magenta(e));
-  };
-  console.printStackTrace = function (err) {
-    console.error(err.stack);
-  };
+
+
+  GLOBAL.log = logger;
+
+// small ad-hoc tests
+//  logger.debug('~debug');
+//  logger.redis('~redis');
+//  logger.verbose('~verbose');
+//  logger.info('~info');
+//  logger.warn('~warn');
+//  logger.error('~error');
+//  try {
+//    var a = {};
+//    a.a.a = 4;
+//  } catch (e) {
+//    logger.printStackTrace(e);
+//  }
+
 };

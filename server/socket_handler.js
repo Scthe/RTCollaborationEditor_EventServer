@@ -70,7 +70,7 @@ function onNewConnection(app, socket) {
     clientId  : data.clientId,
     documentId: data.documentId
   };
-//  console.log(clientData, 'connected');
+//  log.log(clientData, 'connected');
 
   // server to client sending channel
   var emitterCallbacks = {

@@ -35,6 +35,16 @@ module.exports = {
    */
   'skipValidation': false,
 
+  /**
+   * path to the log file
+   */
+  'logFilePath': 'log/main.log',
+
+  /**
+   * console log level, one of: 'debug','verbose','info', 'warn', 'error'
+   */
+  'logLevel': 'debug',
+
   'profiles': {
 
     'c9': {

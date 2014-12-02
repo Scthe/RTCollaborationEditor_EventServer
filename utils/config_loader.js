@@ -7,23 +7,26 @@
  */
 'use strict';
 
-var cfg = require('../config');
-var argv = require('minimist')(process.argv.slice(2));
-//console.dir(argv);
+var winston = require('winston'),
+    cfg = require('../config'),
+    argv = require('minimist')(process.argv.slice(2));
 
 if (argv._.length > 0 && 'profiles' in cfg) {
   var profileName = argv._[0];
   if (profileName in cfg.profiles) {
-    console.log('Using profile: \'' + profileName + '\'');
     var profileSettings = cfg.profiles[profileName];
     for (var k in profileSettings) {
       cfg[k] = profileSettings[k];
     }
+    winston.add(winston.transports.File, { filename: cfg.logFilePath });
+    winston.info('Using profile: \'%s\'', profileName);
   } else {
-    console.log('Could not find profile: \'' + profileName + '\'');
+    winston.add(winston.transports.File, { filename: cfg.logFilePath });
+    winston.error('Could not find profile: \'%s\'', profileName);
   }
 } else {
-  console.log('Using default profile');
+  winston.add(winston.transports.File, { filename: cfg.logFilePath });
+  winston.info('Using default profile');
 }
 
 // do not pollute the config object
