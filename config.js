@@ -25,6 +25,16 @@ module.exports = {
    */
   'redisHost': 'localhost',
 
+  /**
+   * Hidden in plain sight !
+   */
+  'secretKey': 'abcde',
+
+  /**
+   * Can be used to bypass the message validation. Used in f.e. e2e tests
+   */
+  'skipValidation': false,
+
   'profiles': {
 
     'c9': {
@@ -40,12 +50,12 @@ module.exports = {
 
     'sock': {
       'socketOnly': true
-    }
-  },
+    },
 
-  /**
-   * Hidden in plain sight !
-   */
-  'secretKey': 'abcde'
+    'e2e': {
+      'socketOnly'    : false,
+      'skipValidation': true
+    }
+  }
 
 };

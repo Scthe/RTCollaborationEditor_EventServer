@@ -5,7 +5,8 @@
 (function () {
   'use strict';
 
-  var proxyquire = require('proxyquire').noCallThru();
+  var proxyquire = require('proxyquire').noCallThru(),
+      _ = require('underscore');
 
   describe('Pipeline', function () {
 
@@ -291,6 +292,41 @@
       }
 
     });
+
+    describe('#validateMessage', function () {
+
+      var whitelist = [
+        'caret.register',
+        'caret.move',
+        'caret.selectionMove',
+        'caret.setPosition',
+        'caret.setSelection',
+
+        'insert',
+        'wrap',
+        'unwrap',
+        'bold',
+        'italic',
+        'underline',
+        'delete',
+        'heading',
+        'anchor',
+        'list',
+        'newLine',
+        'split'
+      ];
+
+      it('does not filter out correct operation names', function () {
+        var p = new Pipeline(app, clientData);
+
+        _(whitelist).each(function (opName) {
+          var op = {name: opName, args: {}};
+          expect(p.validateMessage(op)).to.be.true;
+        });
+      });
+
+    });
+
 
   });
 
