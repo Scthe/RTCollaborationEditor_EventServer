@@ -1,7 +1,7 @@
 /** @module server/redis_adapter */
 
 'use strict';
-/*global config*/
+/*global config,log*/
 
 var redis = require('redis'),
     util = require('util'),

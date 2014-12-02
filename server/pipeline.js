@@ -1,7 +1,7 @@
 /** @module server/pipeline */
 
 'use strict';
-/* global config */
+/* global config,log */
 
 var RedisAdapter = require('./redis_adapter'),
     _ = require('underscore');

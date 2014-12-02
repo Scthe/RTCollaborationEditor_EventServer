@@ -1,4 +1,5 @@
 'use strict';
+/*global log*/
 
 /**
  * @module server/server_events_receiver
