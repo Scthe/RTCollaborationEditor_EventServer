@@ -1,5 +1,5 @@
 'use strict';
-/* global remoteInterface, CodeMirror*/
+/* global remoteInterface, CodeMirror, $ */
 
 var editor;
 
@@ -13,7 +13,7 @@ $(document).ready(function () {
   value += '// The implementation of joinLines\n';
 
   try {
-    editor = CodeMirror(document.getElementById('editor-div'), {
+    editor = new CodeMirror(document.getElementById('editor-div'), {
       value                  : value,
       lineNumbers            : true,
       autoCloseBrackets      : true,
@@ -43,34 +43,36 @@ $(document).ready(function () {
   editor.on('beforeChange', function (instance, changeObj) {
     /* jshint unused:false */ // isntance is not used
     changeObj.cancel();
-    remoteInterface.send_operation(changeObj);
+    remoteInterface.sendOperation(changeObj);
   });
 
   editor.on('cursorActivity', function (instance) {
     /* jshint unused:false */ // isntance is not used
     var selRange = editor.doc.sel.ranges[0];
 //    console.log('[cursorActivity] ' + selRange.anchor.line + ':' + selRange.anchor.ch + '  ' + selRange.head.line + ':' + selRange.head.ch);
-    remoteInterface.send_selection(selRange);
+    remoteInterface.sendSelection(selRange);
   });
 
   //endregion
 
-  remoteInterface.on_operation = function (changeObj) {
+  remoteInterface.onOperation = function (changeObj) {
 //    console.log(changeObj);
     editor.makeRemoteChange(changeObj.data);
   };
 
-  remoteInterface.on_selection = function (selData) {
+  remoteInterface.onSelection = function (selData) {
     console.log(selData);
   };
 
-  remoteInterface.on_reconnect = function (data) {
+  remoteInterface.onReconnect = function (data) {
     console.log(data);
+    /*jshint camelcase: false */
     $('#user_count').text(data.user_count);
   };
 
-  remoteInterface.on_client_left = function (data) {
+  remoteInterface.onClientLeft = function (data) {
 //    console.log(data);
+    /*jshint camelcase: false */
     $('#user_count').text(data.user_count);
   };
 

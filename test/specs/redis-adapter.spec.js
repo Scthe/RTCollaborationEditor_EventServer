@@ -16,7 +16,7 @@
 
     before(function () {
       // little chai plugin to be able to use:
-      // var args = expect(publisher.publish).secondArgument.to.be.JSON_ObjectsList();
+      // var args = expect(publisher.publish).secondArgument.to.be.ObjectsListInJSON();
       // expect(args).to.containEql(msgTemplate);
       //
       // ( writing sinon matcher would be easier but not nearly as fun)
@@ -31,7 +31,7 @@
           return this;
         });
 
-        Assertion.addChainableMethod('JSON_ObjectsList', function () {
+        Assertion.addChainableMethod('ObjectsListInJSON', function () {
           // we cannot just use 'return JSON.parse(this._obj);'
           // because array converted implicitly to string is not parseable  :(
           return  _.map(this._obj.args, function (e) {
@@ -200,7 +200,7 @@
 
         expect(publisher.publish).called;
         expect(publisher.publish).calledWith(adapter.documentPath, sinon.match.any);
-        var args = expect(publisher.publish).secondArguments.to.be.JSON_ObjectsList();
+        var args = expect(publisher.publish).secondArguments.to.be.ObjectsListInJSON();
         expect(args).to.containEql(msg);
       });
     });

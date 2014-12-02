@@ -8,12 +8,12 @@
   var proxyquire = require('proxyquire').noCallThru(),
       io = require('socket.io-client'),
       jwt = require('jsonwebtoken'),
-      SOCKET_PORT = 8082,
-      SOCKET_HOST = 'localhost';
+      socketPort = 8082,
+      socketHost = 'localhost';
 
   GLOBAL.config = {
-    socket_port: SOCKET_PORT,
-    secret_key : 'test_key'
+    socketPort: socketPort,
+    secretKey : 'test_key'
   };
 
   var pipelineForwardedCalls;
@@ -38,7 +38,7 @@
       app.emit = sinon.spy();
 
       // start socket server
-      server = registerSocketHandler(app, SOCKET_PORT);
+      server = registerSocketHandler(app, socketPort);
 
       // data for client auth step
       clientData = {
@@ -64,9 +64,9 @@
     });
 
     it('connects', function (done) {
-      var token = jwt.sign(clientData, config.secret_key);
+      var token = jwt.sign(clientData, config.secretKey);
       // client socket
-      socket = io.connect('http://' + SOCKET_HOST + ':' + SOCKET_PORT, {
+      socket = io.connect('http://' + socketHost + ':' + socketPort, {
         forceNew: true,
         query   : 'token=' + token
       });
@@ -77,9 +77,9 @@
     });
 
     it('should never let connect with incorrect token', function (done) {
-      var token = jwt.sign(clientData, config.secret_key) + '~';
+      var token = jwt.sign(clientData, config.secretKey) + '~';
       // client socket
-      socket = io.connect('http://' + SOCKET_HOST + ':' + SOCKET_PORT, {
+      socket = io.connect('http://' + socketHost + ':' + socketPort, {
         forceNew: true,
         query   : 'token=' + token
       });
@@ -109,9 +109,9 @@
       });
 
       it('reads provided client data', function (done) {
-        var token = jwt.sign(clientData, config.secret_key);
+        var token = jwt.sign(clientData, config.secretKey);
         // client socket
-        socket = io.connect('http://' + SOCKET_HOST + ':' + SOCKET_PORT, {
+        socket = io.connect('http://' + socketHost + ':' + socketPort, {
           forceNew: true,
           query   : 'token=' + token
         });
@@ -206,9 +206,9 @@
 
     function it_(name, f) {
       it(name, function (done) {
-        var token = jwt.sign(clientData, config.secret_key);
+        var token = jwt.sign(clientData, config.secretKey);
         // client socket
-        socket = io.connect('http://' + SOCKET_HOST + ':' + SOCKET_PORT, {
+        socket = io.connect('http://' + socketHost + ':' + socketPort, {
           forceNew: true,
           query   : 'token=' + token
         });

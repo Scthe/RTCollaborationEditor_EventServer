@@ -17,6 +17,7 @@ module.exports = function (grunt) {
    */
 
   grunt.loadNpmTasks('grunt-mocha-test');
+  grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-mocha-casperjs');
 
@@ -44,7 +45,7 @@ module.exports = function (grunt) {
         tasks  : ['mochaTest:specs']
       }
     },
-    mocha_casperjs: {
+    'mocha_casperjs': {
       options: {
         ui               : 'bdd',
         reporter         : 'list',
@@ -64,6 +65,23 @@ module.exports = function (grunt) {
       files  : {
         src: [ 'test/e2e/*.js']
       }
+    },
+    jshint: {
+      options: {
+        jshintrc: '.jshintrc',
+        reporter: require('jshint-stylish')
+      },
+      all: [
+        'Gruntfile.js',
+        'app.js',
+        'app-test/{,*/}*.js',
+        'bin/{,*/}*.js',
+        'server/{,*/}*.js',
+        'test/{,*/}*.js',
+        'utils/{,*/}*.js',
+        '!app-test/javascripts/codemirror.js'
+//        'test/spec/{,*/}*.js'
+      ]
     }
 
   });

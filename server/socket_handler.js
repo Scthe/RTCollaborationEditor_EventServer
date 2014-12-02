@@ -10,16 +10,16 @@ var http = require('http'),
 module.exports = function (app) {
 
   var server, io;
-  if (!config.socket_only) {
-    server = http.createServer(app).listen(config.socket_port);
+  if (!config.socketOnly) {
+    server = http.createServer(app).listen(config.socketPort);
     io = socketIO(server);
   } else {
-    server = http.createServer().listen(config.socket_port, config.socket_host);
+    server = http.createServer().listen(config.socketPort, config.socketHost);
     io = socketIO.listen(server);
   }
 
   io.set('authorization', socketioJwt.authorize({
-    secret   : config.secret_key,
+    secret   : config.secretKey,
     handshake: true
   }));
 
@@ -31,6 +31,7 @@ module.exports = function (app) {
 };
 
 function onNewConnection(app, socket) {
+  /*jshint camelcase: false */ // decoded_token is part of external lib
   var data = socket.client.request.decoded_token;
   // NOTE: if the provided auth token is not ok
   // the execution does not reach this point

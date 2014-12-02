@@ -15,7 +15,7 @@ router.get('/:id', function (req, res) {
 //    clientId  : 15
   };
 
-  var token = jwt.sign(data, config.secret_key, { expiresInMinutes: 60 * 5 });
+  var token = jwt.sign(data, config.secretKey, { expiresInMinutes: 60 * 5 });
 
   res.render('index', { token: token});
 });
