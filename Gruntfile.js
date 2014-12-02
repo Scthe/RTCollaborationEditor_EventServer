@@ -19,10 +19,11 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-mocha-test');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-jsdoc');
   grunt.loadNpmTasks('grunt-mocha-casperjs');
 
   grunt.initConfig({
-    mochaTest     : {
+    mochaTest       : {
       specs: {
         options: {
           ui               : 'bdd',
@@ -33,7 +34,7 @@ module.exports = function (grunt) {
         src    : ['test/specs/**/*.js']
       }
     },
-    watch         : {
+    watch           : {
       js: {
         options: {
           spawn: false
@@ -66,12 +67,12 @@ module.exports = function (grunt) {
         src: [ 'test/e2e/*.js']
       }
     },
-    jshint: {
+    jshint          : {
       options: {
         jshintrc: '.jshintrc',
         reporter: require('jshint-stylish')
       },
-      all: [
+      all    : [
         'Gruntfile.js',
         'app.js',
         'app-test/{,*/}*.js',
@@ -82,6 +83,18 @@ module.exports = function (grunt) {
         '!app-test/javascripts/codemirror.js'
 //        'test/spec/{,*/}*.js'
       ]
+    },
+    jsdoc           : {
+      generate: {
+        dest: 'doc',
+        src : [
+          'app.js',
+          'app-test/{,*/}*.js',
+          'bin/{,*/}*.js',
+          'server/{,*/}*.js',
+          'utils/{,*/}*.js'
+        ]
+      }
     }
 
   });
