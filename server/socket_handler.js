@@ -1,3 +1,8 @@
+/**
+ * @module server/socket_handler
+ * @exports server/socket_handler.startSocketServer
+ */
+
 'use strict';
 /* global config */
 
@@ -7,8 +12,17 @@ var http = require('http'),
     _ = require('underscore'),
     MsgPipeline = require('./pipeline');
 
-module.exports = function (app) {
+module.exports = startSocketServer;
 
+/**
+ *
+ * Starts separate server to handle incoming socket connection.
+ * Uses config.socketPort and  config.socketHost.
+ *
+ * @param {EventEmitter} app application object used for server-only event bus
+ * @return {Server} http.createServer object
+ */
+function startSocketServer(app) {
   var server, io;
   if (!config.socketOnly) {
     server = http.createServer(app).listen(config.socketPort);
@@ -28,15 +42,30 @@ module.exports = function (app) {
 
   // give possibility to gracefully close socket server
   return server;
-};
+}
 
+/**
+ *
+ * Handler for the incoming client connection. This function has as least
+ * responsibilities as possible to not violate singe responsibility practice.
+ * It makes tests less costly too !
+ *
+ * All we want to do here is:
+ * - read provided client data ( clientId and documentId)
+ * - wrap functions used to send data back to client
+ * - delegate all socket events to newly created pipeline object
+ *
+ * Note that token authorization is handled in filter before this function
+ * is even invoked so we don't even have to care about that.
+ *
+ * @param {EventEmitter} app application object used for server-only event bus
+ * @param {Socket} socket incoming client connection
+ */
 function onNewConnection(app, socket) {
   /*jshint camelcase: false */ // decoded_token is part of external lib
-  var data = socket.client.request.decoded_token;
-  // NOTE: if the provided auth token is not ok
-  // the execution does not reach this point
 
   // read client data
+  var data = socket.client.request.decoded_token;
   var clientData = {
     clientId  : data.clientId,
     documentId: data.documentId
@@ -54,6 +83,6 @@ function onNewConnection(app, socket) {
   var pipe = new MsgPipeline(app, clientData, emitterCallbacks);
 
   // socket callbacks - whatever happened forward it to pipeline ( logic module)
-  socket.on('disconnect', pipe.onDisconnected.bind(pipe, app));
+  socket.on('disconnect', pipe.onDisconnected.bind(pipe));
   socket.on('operation', pipe.onOperationMessage.bind(pipe));
 }

@@ -1,3 +1,20 @@
+/**
+ * Script used to register logging methods.
+ * <p/>
+ * Allows to use following loggers:
+ * <ul>
+ *   <li>error</li>
+ *   <li>info</li>
+ *   <li>debug</li>
+ *   <li>warn</li>
+ *   <li>redis</li>
+ * </ul>
+ *
+ * Also adds utility method <b>printStackTrace</b>
+ *
+ *
+ * @module utils/log_utils
+ */
 'use strict';
 
 // TODO configure morgan ?

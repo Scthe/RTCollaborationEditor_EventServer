@@ -1,5 +1,10 @@
-#!/usr/bin/env node
-
+/**
+ * Script used to load config from config.js located in root directory.
+ * <p/>
+ * Can be used as a start file to check the loaded configurations profiles
+ *
+ * @module utils/config_loader
+ */
 'use strict';
 
 var cfg = require('../config');
