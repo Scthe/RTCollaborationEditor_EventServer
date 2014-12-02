@@ -3,12 +3,19 @@
 var RedisAdapter = require('./redis_adapter');
 
 /**
+ * @module server/pipeline
+ *
+ * @exports {Pipeline} Pipeline class
+ */
+
+
+/**
  *
  * Controller class. After receiving the message we want to pipe in through several steps ( hence the class name).
  * For example when each new user joins to the document we have to communicate
  * it to other document users and subscribe to the event queue.
  *
- * @class Adjust message flow
+ * @class Pipeline
  * @constructor
  *
  * @param {EventEmitter} app application object used for server-only event bus
@@ -67,6 +74,8 @@ module.exports = Pipeline;
  * it from the event stream and publish the 'user left' message.
  * It is worth noting that the sequence of actions is different when user closes
  * his last editor tab and when there are still windows open to this very document.
+ *
+ * @method onDisconnected
  */
 function onDisconnected() {
   /* jshint -W040 */ // binded to Pipeline prototype object
@@ -103,6 +112,7 @@ function onDisconnected() {
  * - enrich it with id of the client that is responsible for the change
  * - publish it to the event stream
  *
+ * @method onOperationMessage
  * @param data message to propagate to other clients editing this document
  */
 function onOperationMessage(data) {
@@ -123,6 +133,7 @@ function onOperationMessage(data) {
  *
  * Invoked when we received notification about client action f.e. operation, joined/left status
  *
+ * @method onPropagatedMessage
  * @param {string}[ch] not used
  * @param {object} msg notification received, should have a field 'type'
  */
@@ -141,4 +152,3 @@ function onPropagatedMessage(ch, msg) {
     this.emitterCallbacks.disconnect(data);
   }
 }
-

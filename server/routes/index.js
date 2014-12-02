@@ -6,13 +6,15 @@ var express = require('express'),
     jwt = require('jsonwebtoken');
 
 /**
- * GET home page.
+ * @module server/routes/index
+ *
+ * GET home page
  *
  * Express route handler. Used only in testing environment.
  *
- * @param {Request} req request object
- * @param {Stream} res response object
+ * @exports {Express.Router} route handler
  */
+
 router.get('/:id', function (req, res) {
   /* jshint unused:false */ // req is not used
   var data = {

@@ -1,5 +1,10 @@
 'use strict';
 
+/**
+ *
+ * @type {exports}
+ */
+
 var util = require('util');
 
 module.exports = function (app) {

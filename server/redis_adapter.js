@@ -28,13 +28,19 @@ var redisPublisher = redisClientFactory('PUBLISHER');
 
 
 /**
+ * @module server/redis_adapter
+ *
+ * @exports {RedisAdapter} RedisAdapter class
+ */
+
+/**
  *
  * Class created to allow for easier communication with the cache layer.
  * Following data are currently held in cache for every document:
  * - list of active users and number associated with how many editors have this client open
  * - the event stream
  *
- * @class Allows for easier redis usage
+ * @class RedisAdapter
  * @constructor
  *
  * @param {Object} clientData object containing following information: clientId and documentId
@@ -55,12 +61,12 @@ RedisAdapter.prototype = {
 
 module.exports = RedisAdapter;
 
-//
-// implementation
 
 /**
  *
  * Utility function used to streamline creation of redis client
+ *
+ * @method redisClientFactory
  * @param {string} [clientLogName] name of the client
  * @return {RedisClient} raw library object
  */
@@ -87,6 +93,7 @@ function redisClientFactory(clientLogName) {
  *
  * Whole flow is asynchronous !
  *
+ * @method subscribe
  * @param {function(string,object)} messageHandler function invoked when the message is received
  * @return {!Promise.<number>|Promise} number of current editor instances that belong to this client
  */
@@ -113,6 +120,7 @@ function subscribe(messageHandler) {
  * - close subscription
  * - remove client from document's user list
  *
+ * @method unsubscribe
  * @return {!Promise.<number>|Promise} number of current editor instances that belong to this client
  */
 function unsubscribe() {
@@ -128,6 +136,7 @@ function unsubscribe() {
  *
  * Get list of ids of all clients that are currently editing this document
  *
+ * @method getUsersForDocument
  * @return {*|!Promise.<Array.<number>>|Promise} list of ids
  */
 function getUsersForDocument() {
@@ -149,6 +158,7 @@ function getUsersForDocument() {
  *
  * Publish the message to all clients editing current document
  *
+ * @method publish
  * @param {object} msg message to publish
  * @return {Promise} Promise to allow chaining of the flow
  */

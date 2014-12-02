@@ -7,6 +7,12 @@ var http = require('http'),
     _ = require('underscore'),
     MsgPipeline = require('./pipeline');
 
+/**
+ * @module server/server_handler
+ *
+ * @exports {function(EventEmitter):Server} factory function to create socket server
+ */
+
 
 module.exports = startSocketServer;
 
@@ -15,6 +21,7 @@ module.exports = startSocketServer;
  * Starts separate server to handle incoming socket connection.
  * Uses config.socketPort and  config.socketHost.
  *
+ * @method startSocketServer
  * @param {EventEmitter} app application object used for server-only event bus
  * @return {Server} http.createServer object
  */
@@ -54,6 +61,7 @@ function startSocketServer(app) {
  * Note that token authorization is handled in filter before this function
  * is even invoked so we don't even have to care about that.
  *
+ * @method onNewConnection
  * @param {EventEmitter} app application object used for server-only event bus
  * @param {Socket} socket incoming client connection
  */
