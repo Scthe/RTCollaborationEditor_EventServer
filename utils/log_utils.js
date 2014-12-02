@@ -69,18 +69,25 @@ module.exports = function (logFilePath, logLevel) {
     );
   }
 
+  logger.printStackTrace = function (err) {
+    logger.error(err.stack);
+  };
+
+
   GLOBAL.log = logger;
 
-  // TODO add printStackTrace
-//  console.printStackTrace = function (err) {
-//    console.error(err.stack);
-//  };
-
+// small ad-hoc tests
 //  logger.debug('~debug');
 //  logger.redis('~redis');
 //  logger.verbose('~verbose');
 //  logger.info('~info');
 //  logger.warn('~warn');
 //  logger.error('~error');
+//  try {
+//    var a = {};
+//    a.a.a = 4;
+//  } catch (e) {
+//    logger.printStackTrace(e);
+//  }
 
 };
