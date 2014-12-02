@@ -76,7 +76,7 @@ PromiseSync.prototype.done = function () {
 // and in the next line of test we could set the PromiseSync.doneCallback
 // knowing that the promises will start being executed
 // AFTER the function describing the test have finished)
-PromiseSync.nbind = function (f, f_this) {
+PromiseSync.nbind = function (f, _this) {
   debug('PromiseSync.nbind');
   return function () {
     // problem we are trying to solve here is to call provided function
@@ -84,7 +84,7 @@ PromiseSync.nbind = function (f, f_this) {
     var args = _.values(arguments);
 
     try {
-      var r = f.apply(f_this, args);
+      var r = f.apply(_this, args);
       return new PromiseSync(r);
     } catch (e) {
       return new PromiseSync(undefined, e);

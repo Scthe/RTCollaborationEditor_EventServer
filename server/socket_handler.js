@@ -31,6 +31,7 @@ module.exports = function (app) {
 };
 
 function onNewConnection(app, socket) {
+  /*jshint camelcase: false */ // decoded_token is part of external lib
   var data = socket.client.request.decoded_token;
   // NOTE: if the provided auth token is not ok
   // the execution does not reach this point

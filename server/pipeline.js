@@ -13,6 +13,7 @@ var RedisAdapter = require('./redis_adapter');
  */
 function Pipeline(app, clientData, emitterCallbacks) {
   // TODO check if client has r/w rights, return undefined if not
+  /*jshint camelcase: false */
 
   this.clientData = clientData;
   this.redisAdapter = new RedisAdapter(clientData, emitterCallbacks);
@@ -58,6 +59,7 @@ module.exports = Pipeline;
 
 function onDisconnected(app) {
   /* jshint -W040 */ // binded to Pipeline prototype object
+  /*jshint camelcase: false */
   var self = this,
       getUsersForDocument = this.redisAdapter.getUsersForDocument.bind(this.redisAdapter),
       removeUserNodeMessage = app.emit.bind(app, 'remove user', self.clientData);

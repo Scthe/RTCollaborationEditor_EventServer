@@ -31,5 +31,5 @@ if (!config.socketOnly) {
 }
 
 // add node event handler
-var system_events_receiver = require('../server/server_events_receiver');
-system_events_receiver(app);
+var systemEventsReceiver = require('../server/server_events_receiver');
+systemEventsReceiver(app);

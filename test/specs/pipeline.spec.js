@@ -80,13 +80,14 @@
       });
 
       it('publishes user list', function () {
-        var m = {
+        /*jshint camelcase: false */
+        var expectedMsg = {
           type   : 'join',
           payload: { client: clientData.clientId, user_count: sinon.match.any }
         };
         var p = new Pipeline(app, clientData);
         expect(p.redisAdapter.__publish).calledOnce;
-        expect(p.redisAdapter.__publish).calledWithExactly(m);
+        expect(p.redisAdapter.__publish).calledWithExactly(expectedMsg);
       });
 
       describe('when user JUST STARTED EDITING', function () {
@@ -149,7 +150,8 @@
         });
 
         it('publishes user list', function () {
-          var m = {
+          /*jshint camelcase: false */
+          var expectedMsg = {
             type   : 'left',
             payload: { client: clientData.clientId, user_count: sinon.match.any }// TODO override user count
           };
@@ -158,7 +160,7 @@
 
           p.onDisconnected(emitter);
 
-          expect(p.redisAdapter.__publish).calledWithExactly(m);
+          expect(p.redisAdapter.__publish).calledWithExactly(expectedMsg);
         });
 
         it('propagates to node message bus', function () {
@@ -261,7 +263,7 @@
         message = {
           payload: {
             client    : faker.random.number(),
-            user_count: faker.random.number()
+            userCount: faker.random.number()
           }
         };
         pipeline = new Pipeline(app, clientData, messageCallbacks);
