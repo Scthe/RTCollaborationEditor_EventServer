@@ -164,11 +164,11 @@
         });
 
         it('propagates to node message bus', function () {
-          var pipeline = new Pipeline(app, clientData);
-          var emitter = {};
+          var emitter = {},
+              pipeline = new Pipeline(emitter, clientData);
           emitter.emit = sinon.spy();
 
-          pipeline.onDisconnected(emitter);
+          pipeline.onDisconnected();
 
           expect(emitter.emit).calledOnce;
           expect(emitter.emit).calledWithExactly('remove user', clientData, undefined); // last undefined is added through Q
@@ -262,7 +262,7 @@
         };
         message = {
           payload: {
-            client    : faker.random.number(),
+            client   : faker.random.number(),
             userCount: faker.random.number()
           }
         };
