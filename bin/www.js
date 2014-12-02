@@ -21,7 +21,7 @@ var debug = require('debug')('sublimeDocs-SocketServer');
 GLOBAL.config = require('../utils/config_loader');
 
 // start logs
-require('../utils/log_utils')();
+require('../utils/log_utils')(config.logFilePath, config.logLevel);
 
 var app;
 if (!config.socketOnly) {
