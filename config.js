@@ -28,7 +28,7 @@ module.exports = {
   /**
    * Hidden in plain sight !
    */
-  'secretKey': 'abcde',
+  'secretKey': '6b83a0648b04be6a491c6ce5d024cc24',
 
   /**
    * Can be used to bypass the message validation. Used in f.e. e2e tests
