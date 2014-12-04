@@ -194,7 +194,7 @@ Pipeline.prototype.onPropagatedMessage = function (ch, msg) {
  */
 Pipeline.prototype.validateMessage = function (msg) {
   /* jshint -W040 */ // binded to Pipeline prototype object
-  return _(operationNameWhitelist).contains(msg.name);
+  return _(operationNameWhitelist).contains(msg.data.name);
 };
 
 module.exports = Pipeline;
