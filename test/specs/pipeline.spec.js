@@ -1,6 +1,6 @@
 /*jslint indent: 2 */
 /*jshint expr: true*/
-/* global describe, it, beforeEach, expect, require, sinon, afterEach, faker, PromiseSync */
+/* global describe, it, beforeEach, expect, require, sinon, afterEach, faker, PromiseSync, requireHelper */
 
 (function () {
   'use strict';
@@ -20,7 +20,7 @@
         './redis_adapter': RedisAdapterProxy,
         'q'              : PromiseSync
       };
-      Pipeline = proxyquire('../../server/pipeline', moduleOverrides);
+      Pipeline = proxyquire(requireHelper('pipeline'), moduleOverrides);
     });
 
     beforeEach(function () {

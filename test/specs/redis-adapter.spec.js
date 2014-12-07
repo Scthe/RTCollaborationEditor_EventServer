@@ -1,6 +1,6 @@
 /*jslint indent: 2 */
 /*jshint expr: true*/
-/* global describe, it, beforeEach, before, expect, require, sinon, voidFunction, faker, chai, PromiseSync */
+/* global describe, it, beforeEach, before, expect, require, sinon, voidFunction, faker, chai, PromiseSync, requireHelper */
 
 (function () {
   'use strict';
@@ -272,7 +272,7 @@
         'q'    : PromiseSync
       };
 
-      return proxyquire('../../server/redis_adapter', redisAdapterModuleOverrides);
+      return proxyquire(requireHelper('redis_adapter'), redisAdapterModuleOverrides);
 
       function createRedisClientInstance(overrides) {
         var overrides_ = overrides ? overrides : {};

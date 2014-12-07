@@ -25,3 +25,9 @@ global.log = {
   warn   : console.log,
   error  : console.error
 };
+
+global.requireHelper = function (path) {
+  'use strict';
+//  return require((process.env.APP_DIR_FOR_CODE_COVERAGE || '../server/') + path);
+  return (process.env.APP_DIR_FOR_CODE_COVERAGE || '../../server/') + path;
+};
