@@ -16,3 +16,12 @@ global.faker = require('faker');
 
 global.voidFunction = function () {
 };
+
+global.log = {
+  debug  : console.log,
+  redis  : console.log,
+  verbose: console.log,
+  info   : console.log,
+  warn   : console.log,
+  error  : console.error
+};
