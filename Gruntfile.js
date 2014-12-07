@@ -16,11 +16,14 @@ module.exports = function (grunt) {
 
    */
 
-  grunt.loadNpmTasks('grunt-mocha-test');
+  grunt.loadNpmTasks('grunt-contrib-clean');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-jsdoc');
   grunt.loadNpmTasks('grunt-mocha-casperjs');
+  grunt.loadNpmTasks('grunt-mocha-test');
+  grunt.loadNpmTasks('grunt-istanbul');
+  grunt.loadNpmTasks('grunt-env');
 
   grunt.initConfig({
     mochaTest       : {
@@ -95,13 +98,55 @@ module.exports = function (grunt) {
           'utils/{,*/}*.js'
         ]
       }
+    },
+    // code coverage below
+    env             : {
+      coverage: {
+        APP_DIR_FOR_CODE_COVERAGE: '../coverage/instrument/server/'
+      }
+    },
+    clean           : {
+      coverage: {
+        src: ['test/coverage/']
+      }
+    },
+    instrument      : {
+      files  : 'server/*.js',
+//      files  : 'server/pipeline.js',
+//      files  : 'server/socket_handler.js',
+//      files  : 'server/redis_adapter.js',
+      options: {
+        lazy    : true,
+        basePath: 'test/coverage/instrument/'
+      }
+    },
+    storeCoverage   : {
+      options: {
+        dir: 'test/coverage/reports'
+      }
+    },
+    makeReport      : {
+      src    : 'test/coverage/reports/**/*.json',
+      options: {
+        type : 'html',
+        dir  : 'test/coverage/reports',
+        print: 'detail'
+      }
     }
+    // end - code coverage settings
+
 
   });
 
   grunt.registerTask('default', 'watch');
   grunt.registerTask('mocha', ['mochaTest:specs']);
   grunt.registerTask('e2e', [/* 'connect', */'mocha_casperjs']);
+
+  /**
+   * I case of errors during instrumentation just instrument files one by one
+   */
+  grunt.registerTask('coverage', [ /*'clean',*/ 'env:coverage',
+    /*'instrument',*/ 'mochaTest:specs', 'storeCoverage', 'makeReport']);
 
 // On watch events, if the changed file is a test file then configure mochaTest to only
 // run the tests from that file. Otherwise run all the tests

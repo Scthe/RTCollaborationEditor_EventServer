@@ -1,6 +1,6 @@
 /*jslint indent: 2 */
 /*jshint expr: true*/
-/* global describe, it, beforeEach, expect, require, sinon, afterEach, faker, config */
+/* global describe, it, beforeEach, expect, require, sinon, afterEach, faker, config, requireHelper */
 
 (function () {
   'use strict';
@@ -30,7 +30,7 @@
       var socketHandlerModuleOverrides = {
         './pipeline': PipelineProxy
       };
-      var registerSocketHandler = proxyquire('../../server/socket_handler', socketHandlerModuleOverrides);
+      var registerSocketHandler = proxyquire(requireHelper('socket_handler'), socketHandlerModuleOverrides);
 
       // create app object
       app = function () {
