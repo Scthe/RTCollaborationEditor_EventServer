@@ -45,26 +45,27 @@ module.exports = {
    */
   'logLevel': 'debug',
 
+  /**
+   * does not start HTML server
+   */
+  'socketOnly': true,
+
   'profiles': {
 
-    'c9': {
-      /**
-       * does not start HTML server
-       */
+    'external': {
       'socketOnly': true,
       'socketPort': process.env.PORT,
       'socketHost': process.env.IP
-      // client:
-      // var socket = io.connect('http://sublime_docs-server-c9-dbxmvqtn111.c9.io')
-    },
-
-    'sock': {
-      'socketOnly': true
     },
 
     'e2e': {
       'socketOnly'    : false,
       'skipValidation': true
+    },
+
+    'diagnostic': {
+      'socketOnly': false,
+      'logLevel'  : 'debug'
     }
   }
 
